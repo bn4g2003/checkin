@@ -70,7 +70,7 @@ export default function WifiCheckinsPage() {
         ? filteredHistory
         : checkins;
       if (!list.length) {
-        addToast({ type: 'error', message: 'Không có dữ liệu để xuất' });
+        addToast({ type: 'error', message: 'No data to export' });
         return;
       }
 
@@ -79,7 +79,7 @@ export default function WifiCheckinsPage() {
       const sheet = workbook.addWorksheet('CheckinHistory');
 
       // Header
-      const headers = ['Thời gian', 'Mã NV', 'Họ tên', 'Type', 'WiFi', 'Public IP', 'Local IP', 'Ảnh hiện trường'];
+      const headers = ['Time', 'Employee ID', 'Full Name', 'Type', 'WiFi', 'Public IP', 'Local IP', 'Photo'];
       sheet.addRow(headers);
       const headerRow = sheet.getRow(1);
       headerRow.font = { bold: true };
@@ -92,14 +92,14 @@ export default function WifiCheckinsPage() {
         const rowIndex = i + 2; // +2 because Excel is 1-indexed and we have header row
         
         sheet.addRow([
-          c.timestamp ? new Date(c.timestamp).toLocaleString('vi-VN') : '',
+          c.timestamp ? new Date(c.timestamp).toLocaleString('en-US') : '',
           (c.employeeId || '').toUpperCase(),
           c.employeeName || '',
           c.type === 'in' ? 'Check-in' : (c.type === 'out' ? 'Check-out' : (c.type || '')),
           c.wifi?.ssid || '',
           c.wifi?.publicIP || '',
           c.wifi?.localIP || '',
-          c.photoBase64 ? 'Có ảnh' : 'Không có'
+          c.photoBase64 ? 'Yes' : 'No'
         ]);
         
         // Add image if exists
@@ -140,21 +140,21 @@ export default function WifiCheckinsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      addToast({ type: 'success', message: 'Đã xuất Excel (XLSX) với ảnh' });
+      addToast({ type: 'success', message: 'Excel (XLSX) exported with photos' });
     } catch (e) {
       console.error(e);
-      addToast({ type: 'error', message: 'Lỗi xuất XLSX' });
+      addToast({ type: 'error', message: 'Error exporting XLSX' });
     }
   };
 
   const exportMonthlyXLSX = async () => {
-    if (!monthlySummary.length) { addToast({ type: 'error', message: 'Không có dữ liệu tháng để xuất' }); return; }
+    if (!monthlySummary.length) { addToast({ type: 'error', message: 'No monthly data to export' }); return; }
     try {
       const ExcelJS = (await import('exceljs')).default;
       const workbook = new ExcelJS.Workbook();
       const sheet = workbook.addWorksheet('MonthlySummary');
 
-      const headers = ['Mã NV', 'Họ tên', 'Số ngày', 'Tổng giờ', 'Số lần trễ', 'Số lần về sớm'];
+      const headers = ['Employee ID', 'Full Name', 'Days', 'Total Hours', 'Late Count', 'Early Departure Count'];
       sheet.addRow(headers);
       const headerRow = sheet.getRow(1);
       headerRow.font = { bold: true };
@@ -187,10 +187,10 @@ export default function WifiCheckinsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      addToast({ type: 'success', message: 'Đã xuất Excel (XLSX)' });
+      addToast({ type: 'success', message: 'Excel (XLSX) exported' });
     } catch (e) {
       console.error(e);
-      addToast({ type: 'error', message: 'Lỗi xuất XLSX' });
+      addToast({ type: 'error', message: 'Error exporting XLSX' });
     }
   };
 
@@ -219,7 +219,7 @@ export default function WifiCheckinsPage() {
           if (val) setWorkSettings(prev => ({ ...prev, ...val }));
         });
       } catch {
-        setStatus({ type: 'error', message: 'Không thể tải dữ liệu.' });
+        setStatus({ type: 'error', message: 'Could not load data.' });
       }
     })();
   }, []);
@@ -255,7 +255,7 @@ export default function WifiCheckinsPage() {
 
   const submitWifi = async (e) => {
     e.preventDefault();
-    if (!wifiForm.name) { setStatus({ type: 'error', message: 'Thiếu tên WiFi' }); return; }
+    if (!wifiForm.name) { setStatus({ type: 'error', message: 'Missing WiFi name' }); return; }
     try {
       const { database, ref, push, update } = await getDb();
       if (editingWifi) {
@@ -264,7 +264,7 @@ export default function WifiCheckinsPage() {
           publicIP: wifiForm.publicIP || null,
           localIP: wifiForm.localIP || null
         });
-        setStatus({ type: 'success', message: 'Đã cập nhật WiFi' });
+        setStatus({ type: 'success', message: 'WiFi updated' });
       } else {
         const listRef = ref(database, 'companyWifis');
         const item = {
@@ -274,14 +274,14 @@ export default function WifiCheckinsPage() {
           createdAt: new Date().toISOString()
         };
         await push(listRef, item);
-        setStatus({ type: 'success', message: 'Đã thêm WiFi' });
+        setStatus({ type: 'success', message: 'WiFi added' });
       }
       setWifiForm({ name: '', publicIP: '', localIP: '' });
       setEditingWifi(null);
       setTimeout(() => setStatus(null), 2000);
     } catch {
-      setStatus({ type: 'error', message: 'Lỗi lưu WiFi' });
-      addToast({ type: 'error', message: 'Lỗi lưu WiFi' });
+      setStatus({ type: 'error', message: 'Error saving WiFi' });
+      addToast({ type: 'error', message: 'Error saving WiFi' });
     }
   };
 
@@ -291,16 +291,16 @@ export default function WifiCheckinsPage() {
   };
 
   const deleteWifi = async (wifi) => {
-    if (!confirm('Xoá WiFi này?')) return;
+    if (!confirm('Delete this WiFi?')) return;
     try {
       const { database, ref, remove } = await getDb();
       await remove(ref(database, `companyWifis/${wifi.id}`));
-      setStatus({ type: 'success', message: 'Đã xoá' });
-      addToast({ type: 'success', message: 'Xoá WiFi thành công' });
+      setStatus({ type: 'success', message: 'Deleted' });
+      addToast({ type: 'success', message: 'WiFi deleted successfully' });
       setTimeout(() => setStatus(null), 1500);
     } catch {
-      setStatus({ type: 'error', message: 'Không thể xoá' });
-      addToast({ type: 'error', message: 'Không thể xoá WiFi' });
+      setStatus({ type: 'error', message: 'Could not delete' });
+      addToast({ type: 'error', message: 'Could not delete WiFi' });
     }
   };
 
@@ -394,12 +394,12 @@ export default function WifiCheckinsPage() {
     try {
       const { database, ref, set } = await getDb();
       await set(ref(database, 'workSettings/global'), workSettings);
-      setStatus({ type: 'success', message: 'Đã lưu cài đặt giờ làm việc' });
-      addToast({ type: 'success', message: 'Lưu cài đặt giờ làm việc thành công' });
+      setStatus({ type: 'success', message: 'Work hour settings saved' });
+      addToast({ type: 'success', message: 'Work hour settings saved successfully' });
       setTimeout(() => setStatus(null), 2000);
     } catch {
-      setStatus({ type: 'error', message: 'Không thể lưu cài đặt giờ làm việc' });
-      addToast({ type: 'error', message: 'Lỗi lưu cài đặt giờ làm việc' });
+      setStatus({ type: 'error', message: 'Could not save work hour settings' });
+      addToast({ type: 'error', message: 'Error saving work hour settings' });
     } finally {
       setSavingSettings(false);
     }
@@ -413,7 +413,7 @@ export default function WifiCheckinsPage() {
             <div className="flex items-center space-x-3">
               <Clock className="text-indigo-600" />
               <div>
-                <div className="text-sm text-gray-500">Check-ins hôm nay</div>
+                <div className="text-sm text-gray-500">Check-ins today</div>
                 <div className="text-2xl font-bold text-gray-900">{stats.todayCheckins}</div>
               </div>
             </div>
@@ -423,7 +423,7 @@ export default function WifiCheckinsPage() {
             <div className="flex items-center space-x-3">
               <Wifi className="text-green-600" />
               <div>
-                <div className="text-sm text-gray-500">WiFi đã cấu hình</div>
+                <div className="text-sm text-gray-500">Configured WiFi</div>
                 <div className="text-2xl font-bold text-gray-900">{stats.wifiCount}</div>
               </div>
             </div>
@@ -434,9 +434,9 @@ export default function WifiCheckinsPage() {
         {/* Tab Navigation */}
         <div className="flex space-x-2">
           {[
-            { id: 'wifi', label: 'Quản lý WiFi' },
-            { id: 'history', label: 'Lịch sử Check-in' },
-            { id: 'workhours', label: 'Quản lý giờ làm việc' }
+            { id: 'wifi', label: 'Manage WiFi' },
+            { id: 'history', label: 'Check-in History' },
+            { id: 'workhours', label: 'Manage Work Hours' }
           ].map(t => (
             <button
               key={t.id}
@@ -452,10 +452,10 @@ export default function WifiCheckinsPage() {
         <div className="bg-white rounded-xl shadow p-6 min-h-[300px]">
           {activeTab === 'wifi' && (
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold">Quản lý WiFi</h2>
+              <h2 className="text-lg font-semibold">Manage WiFi</h2>
               <form onSubmit={submitWifi} className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm bg-gray-50 p-4 rounded border">
                 <div>
-                  <label className="block mb-1 font-medium">Tên WiFi *</label>
+                  <label className="block mb-1 font-medium">WiFi Name *</label>
                   <input value={wifiForm.name} onChange={e => setWifiForm({ ...wifiForm, name: e.target.value })} className="w-full px-3 py-2 border rounded" />
                 </div>
                 <div>
@@ -467,22 +467,22 @@ export default function WifiCheckinsPage() {
                   <input value={wifiForm.localIP} onChange={e => setWifiForm({ ...wifiForm, localIP: e.target.value })} className="w-full px-3 py-2 border rounded font-mono" />
                 </div>
                 <div className="flex items-end gap-2">
-                  <button type="button" onClick={refreshCurrentIPs} className="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 text-xs">Lấy IP hiện tại</button>
-                  <button type="submit" className="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-xs">{editingWifi ? 'Lưu' : 'Thêm'}</button>
-                  {editingWifi && <button type="button" onClick={() => { setEditingWifi(null); setWifiForm({ name: '', publicIP: '', localIP: '' }); }} className="px-3 py-2 bg-gray-100 rounded text-xs">Huỷ</button>}
+                  <button type="button" onClick={refreshCurrentIPs} className="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 text-xs">Get Current IP</button>
+                  <button type="submit" className="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-xs">{editingWifi ? 'Save' : 'Add'}</button>
+                  {editingWifi && <button type="button" onClick={() => { setEditingWifi(null); setWifiForm({ name: '', publicIP: '', localIP: '' }); }} className="px-3 py-2 bg-gray-100 rounded text-xs">Cancel</button>}
                 </div>
               </form>
               {status && <div className={`text-sm px-3 py-2 rounded ${status.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{status.message}</div>}
               <div className="overflow-x-auto">
-                {loadingWifi ? <div className="text-sm text-gray-500">Đang tải...</div> : (
+                {loadingWifi ? <div className="text-sm text-gray-500">Loading...</div> : (
                   <table className="min-w-full text-sm">
                     <thead>
                       <tr className="bg-gray-100 text-left">
-                        <th className="p-2 font-medium">Tên</th>
+                        <th className="p-2 font-medium">Name</th>
                         <th className="p-2 font-medium">Public IP</th>
                         <th className="p-2 font-medium">Local IP</th>
-                        <th className="p-2 font-medium">Tạo lúc</th>
-                        <th className="p-2 font-medium">Hành động</th>
+                        <th className="p-2 font-medium">Created At</th>
+                        <th className="p-2 font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -491,10 +491,10 @@ export default function WifiCheckinsPage() {
                           <td className="p-2 font-medium">{w.name}</td>
                           <td className="p-2 font-mono text-xs">{w.publicIP || <span className='text-gray-400'>—</span>}</td>
                           <td className="p-2 font-mono text-xs">{w.localIP || <span className='text-gray-400'>—</span>}</td>
-                          <td className="p-2 text-xs">{w.createdAt ? new Date(w.createdAt).toLocaleString('vi-VN') : '—'}</td>
+                          <td className="p-2 text-xs">{w.createdAt ? new Date(w.createdAt).toLocaleString('en-US') : '—'}</td>
                           <td className="p-2 space-x-1 text-xs">
-                            <button onClick={() => editWifi(w)} className="text-indigo-600 hover:underline">Sửa</button>
-                            <button onClick={() => deleteWifi(w)} className="text-red-600 hover:underline">Xoá</button>
+                            <button onClick={() => editWifi(w)} className="text-indigo-600 hover:underline">Edit</button>
+                            <button onClick={() => deleteWifi(w)} className="text-red-600 hover:underline">Delete</button>
                           </td>
                         </tr>
                       ))}
@@ -504,7 +504,7 @@ export default function WifiCheckinsPage() {
               </div>
               {!loadingWifi && (
                 <div className="flex items-center justify-between mt-3 text-xs">
-                  <span>Trang {wifiPage} / {wifiTotalPages} (Tổng {wifis.length})</span>
+                  <span>Page {wifiPage} / {wifiTotalPages} (Total {wifis.length})</span>
                   <div className="space-x-2">
                     <button disabled={wifiPage === 1} onClick={() => setWifiPage(p => Math.max(1, p - 1))} className="px-2 py-1 border rounded disabled:opacity-40">Prev</button>
                     <button disabled={wifiPage === wifiTotalPages} onClick={() => setWifiPage(p => Math.min(wifiTotalPages, p + 1))} className="px-2 py-1 border rounded disabled:opacity-40">Next</button>
@@ -515,10 +515,10 @@ export default function WifiCheckinsPage() {
           )}
           {activeTab === 'history' && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Lịch sử Check-in</h2>
+              <h2 className="text-lg font-semibold">Check-in History</h2>
               <div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-xs bg-gray-50 p-3 rounded border">
                 <div>
-                  <label className="block mb-1">Ngày</label>
+                  <label className="block mb-1">Date</label>
                   <input type="date" value={filters.date} onChange={e => { setFilters({ ...filters, date: e.target.value }); setPage(1); }} className="w-full px-2 py-1 border rounded" />
                 </div>
                 <div>
@@ -530,8 +530,8 @@ export default function WifiCheckinsPage() {
                   </select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block mb-1">Nhân viên</label>
-                  <input value={filters.employee} onChange={e => { setFilters({ ...filters, employee: e.target.value }); setPage(1); }} className="w-full px-2 py-1 border rounded" placeholder="Tìm theo tên hoặc mã" />
+                  <label className="block mb-1">Employee</label>
+                  <input value={filters.employee} onChange={e => { setFilters({ ...filters, employee: e.target.value }); setPage(1); }} className="w-full px-2 py-1 border rounded" placeholder="Search by name or ID" />
                 </div>
                 <div className="flex items-end">
                   <button onClick={() => { setFilters({ date: '', type: '', employee: '' }); setPage(1); }} className="px-3 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200">Clear</button>
@@ -550,25 +550,25 @@ export default function WifiCheckinsPage() {
                     <table className="min-w-full text-xs">
                       <thead>
                         <tr className="bg-gray-100 text-left">
-                          <th className="p-2">Thời gian</th>
-                          <th className="p-2">Nhân viên</th>
+                          <th className="p-2">Time</th>
+                          <th className="p-2">Employee</th>
                           <th className="p-2">Type</th>
                           <th className="p-2">WiFi</th>
                           <th className="p-2">Public IP</th>
                           <th className="p-2">Local IP</th>
-                          <th className="p-2">Ảnh hiện trường</th>
+                          <th className="p-2">Photo</th>
                         </tr>
                       </thead>
                       <tbody>
                         {pageHistory.map(c => (
                           <tr key={c.id} className="border-t hover:bg-gray-50">
-                            <td className="p-2 whitespace-nowrap">{c.timestamp ? new Date(c.timestamp).toLocaleString('vi-VN') : '—'}</td>
+                            <td className="p-2 whitespace-nowrap">{c.timestamp ? new Date(c.timestamp).toLocaleString('en-US') : '—'}</td>
                             <td className="p-2">{c.employeeName} <span className="text-gray-400">({c.employeeId})</span></td>
                             <td className="p-2 font-medium">{c.type === 'in' ? 'IN' : 'OUT'}</td>
                             <td className="p-2">{c.wifi?.ssid}</td>
                             <td className="p-2 font-mono">{c.wifi?.publicIP || '—'}</td>
                             <td className="p-2 font-mono">{c.wifi?.localIP || '—'}</td>
-                            <td className="p-2">{c.photoBase64 ? <div className='cursor-pointer' onClick={() => setModalPhoto({ src: c.photoBase64, employeeName: c.employeeName, timestamp: c.timestamp })}><img src={c.photoBase64} alt="Ảnh hiện trường" width={50} height={50} /></div> : <span className="text-gray-400">—</span>}</td>
+                            <td className="p-2">{c.photoBase64 ? <div className='cursor-pointer' onClick={() => setModalPhoto({ src: c.photoBase64, employeeName: c.employeeName, timestamp: c.timestamp })}><img src={c.photoBase64} alt="Check-in Photo" width={50} height={50} /></div> : <span className="text-gray-400">—</span>}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -578,17 +578,17 @@ export default function WifiCheckinsPage() {
                   <div className="md:hidden space-y-3">
                     {pageHistory.map(c => (
                       <div key={c.id} className="border rounded-lg p-3 bg-gray-50">
-                        <div className="text-xs text-gray-500">{c.timestamp ? new Date(c.timestamp).toLocaleString('vi-VN') : '—'}</div>
+                        <div className="text-xs text-gray-500">{c.timestamp ? new Date(c.timestamp).toLocaleString('en-US') : '—'}</div>
                         <div className="font-medium">{c.employeeName} <span className="text-gray-400">({c.employeeId})</span></div>
                         <div className="text-xs">Type: <span className="font-medium">{c.type === 'in' ? 'IN' : 'OUT'}</span></div>
                         <div className="text-xs">WiFi: {c.wifi?.ssid}</div>
                         <div className="text-[11px] font-mono text-gray-600">Public: {c.wifi?.publicIP || '—'} | Local: {c.wifi?.localIP || '—'}</div>
-                        <div className="p-2">{c.photoBase64 ? <div className='cursor-pointer' onClick={() => setModalPhoto({ src: c.photoBase64, employeeName: c.employeeName, timestamp: c.timestamp })}><img src={c.photoBase64} alt="Ảnh hiện trường" width={50} height={50} /></div> : <span className="text-gray-400">—</span>}</div>
+                        <div className="p-2">{c.photoBase64 ? <div className='cursor-pointer' onClick={() => setModalPhoto({ src: c.photoBase64, employeeName: c.employeeName, timestamp: c.timestamp })}><img src={c.photoBase64} alt="Check-in Photo" width={50} height={50} /></div> : <span className="text-gray-400">—</span>}</div>
                       </div>
                     ))}
                   </div>
                   <div className="flex items-center justify-between mt-3 text-xs">
-                    <span>Trang {page} / {totalPages} (Tổng {filteredHistory.length})</span>
+                    <span>Page {page} / {totalPages} (Total {filteredHistory.length})</span>
                     <div className="space-x-2">
                       <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="px-2 py-1 border rounded disabled:opacity-40">Prev</button>
                       <button disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="px-2 py-1 border rounded disabled:opacity-40">Next</button>
@@ -600,43 +600,43 @@ export default function WifiCheckinsPage() {
           )}
           {activeTab === 'workhours' && (
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold">Quản lý giờ làm việc</h2>
+              <h2 className="text-lg font-semibold">Manage Work Hours</h2>
               <form onSubmit={saveWorkSettings} className="grid grid-cols-2 md:grid-cols-6 gap-4 bg-gray-50 p-4 rounded border text-xs">
                 <div>
-                  <label className="block mb-1 font-medium">Giờ vào</label>
+                  <label className="block mb-1 font-medium">Check-in Time</label>
                   <input value={workSettings.standardCheckin} onChange={e => setWorkSettings(ws => ({ ...ws, standardCheckin: e.target.value }))} type="time" className="w-full px-2 py-1 border rounded" />
                 </div>
                 <div>
-                  <label className="block mb-1 font-medium">Giờ ra</label>
+                  <label className="block mb-1 font-medium">Check-out Time</label>
                   <input value={workSettings.standardCheckout} onChange={e => setWorkSettings(ws => ({ ...ws, standardCheckout: e.target.value }))} type="time" className="w-full px-2 py-1 border rounded" />
                 </div>
                 <div>
-                  <label className="block mb-1 font-medium">Giờ nghỉ trưa</label>
+                  <label className="block mb-1 font-medium">Lunch Start Time</label>
                   <input value={workSettings.lunchStart} onChange={e => setWorkSettings(ws => ({ ...ws, lunchStart: e.target.value }))} type="time" className="w-full px-2 py-1 border rounded" />
                 </div>
                 <div>
-                  <label className="block mb-1 font-medium">Giờ kết thúc nghỉ trưa</label>
+                  <label className="block mb-1 font-medium">Lunch End Time</label>
                   <input value={workSettings.lunchEnd} onChange={e => setWorkSettings(ws => ({ ...ws, lunchEnd: e.target.value }))} type="time" className="w-full px-2 py-1 border rounded" />
                 </div>
                 <div>
-                  <label className="block mb-1 font-medium">Số giờ làm (tự động)</label>
+                  <label className="block mb-1 font-medium">Work Hours (auto)</label>
                   <input value={workSettings.standardHours} readOnly disabled className="w-full px-2 py-1 border rounded bg-gray-100 text-gray-600 cursor-not-allowed" />
                 </div>
                 <div className="flex items-end">
-                  <button disabled={savingSettings} type="submit" className="px-3 py-2 bg-indigo-600 text-white rounded text-xs disabled:opacity-50">Lưu</button>
+                  <button disabled={savingSettings} type="submit" className="px-3 py-2 bg-indigo-600 text-white rounded text-xs disabled:opacity-50">Save</button>
                 </div>
               </form>
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-semibold mb-2 text-sm">Daily Records (Hôm nay)</h3>
-                  {dailyRecords.length === 0 ? <div className="text-xs text-gray-500">Chưa đủ dữ liệu.</div> : (
+                  <h3 className="font-semibold mb-2 text-sm">Daily Records (Today)</h3>
+                  {dailyRecords.length === 0 ? <div className="text-xs text-gray-500">Not enough data.</div> : (
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-xs">
                         <thead>
                           <tr className="bg-gray-100">
-                            <th className="p-2 text-left">Nhân viên</th>
+                            <th className="p-2 text-left">Employee</th>
                             <th className="p-2 text-left">Status</th>
-                            <th className="p-2 text-left">Giờ làm</th>
+                            <th className="p-2 text-left">Work Hours</th>
                             <th className="p-2 text-left">Late</th>
                             <th className="p-2 text-left">Early</th>
                           </tr>
@@ -657,7 +657,7 @@ export default function WifiCheckinsPage() {
                   )}
                   {dailyRecords.length > 0 && (
                     <div className="flex items-center justify-between mt-3 text-xs">
-                      <span>Trang {dailyPage} / {dailyTotalPages} (Tổng {dailyRecords.length})</span>
+                      <span>Page {dailyPage} / {dailyTotalPages} (Total {dailyRecords.length})</span>
                       <div className="space-x-2">
                         <button disabled={dailyPage === 1} onClick={() => setDailyPage(p => Math.max(1, p - 1))} className="px-2 py-1 border rounded disabled:opacity-40">Prev</button>
                         <button disabled={dailyPage === dailyTotalPages} onClick={() => setDailyPage(p => Math.min(dailyTotalPages, p + 1))} className="px-2 py-1 border rounded disabled:opacity-40">Next</button>
@@ -667,17 +667,17 @@ export default function WifiCheckinsPage() {
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-sm">Monthly Summary (Tháng hiện tại)</h3>
+                    <h3 className="font-semibold text-sm">Monthly Summary (Current Month)</h3>
                     <button onClick={exportMonthlyXLSX} className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Export XLSX</button>
                   </div>
-                  {monthlySummary.length === 0 ? <div className="text-xs text-gray-500">Chưa có dữ liệu tháng.</div> : (
+                  {monthlySummary.length === 0 ? <div className="text-xs text-gray-500">No monthly data.</div> : (
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-xs">
                         <thead>
                           <tr className="bg-gray-100">
-                            <th className="p-2 text-left">Nhân viên</th>
-                            <th className="p-2 text-left">Ngày làm</th>
-                            <th className="p-2 text-left">Tổng giờ</th>
+                            <th className="p-2 text-left">Employee</th>
+                            <th className="p-2 text-left">Work Days</th>
+                            <th className="p-2 text-left">Total Hours</th>
                             <th className="p-2 text-left">Late</th>
                             <th className="p-2 text-left">Early</th>
                           </tr>
@@ -698,7 +698,7 @@ export default function WifiCheckinsPage() {
                   )}
                   {monthlySummary.length > 0 && (
                     <div className="flex items-center justify-between mt-3 text-xs">
-                      <span>Trang {monthlyPage} / {monthlyTotalPages} (Tổng {monthlySummary.length})</span>
+                      <span>Page {monthlyPage} / {monthlyTotalPages} (Total {monthlySummary.length})</span>
                       <div className="space-x-2">
                         <button disabled={monthlyPage === 1} onClick={() => setMonthlyPage(p => Math.max(1, p - 1))} className="px-2 py-1 border rounded disabled:opacity-40">Prev</button>
                         <button disabled={monthlyPage === monthlyTotalPages} onClick={() => setMonthlyPage(p => Math.min(monthlyTotalPages, p + 1))} className="px-2 py-1 border rounded disabled:opacity-40">Next</button>
@@ -717,8 +717,8 @@ export default function WifiCheckinsPage() {
                 <h3 className="font-semibold">{modalPhoto.employeeName}</h3>
                 <button onClick={() => setModalPhoto(null)} className="text-gray-500 hover:text-gray-900">✕</button>
               </div>
-              <div className="text-xs text-gray-500 mb-2">{modalPhoto.timestamp ? new Date(modalPhoto.timestamp).toLocaleString('vi-VN') : ''}</div>
-              <img src={modalPhoto.src} alt="Ảnh checkin" className="max-w-full max-h-[70vh] object-contain rounded" />
+              <div className="text-xs text-gray-500 mb-2">{modalPhoto.timestamp ? new Date(modalPhoto.timestamp).toLocaleString('en-US') : ''}</div>
+              <img src={modalPhoto.src} alt="Check-in Photo" className="max-w-full max-h-[70vh] object-contain rounded" />
             </div>
           </div>
         )}

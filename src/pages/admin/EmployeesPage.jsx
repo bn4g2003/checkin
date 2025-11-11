@@ -43,34 +43,34 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-800">{isEditing ? 'Chỉnh sửa nhân sự' : 'Thêm nhân sự mới'}</h2>
+          <h2 className="text-lg font-semibold text-gray-800">{isEditing ? 'Edit Employee' : 'Add New Employee'}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
         </div>
         <form onSubmit={handleSave} className="flex-grow overflow-y-auto p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {renderField('Mã nhân viên', 'employeeId', 'text', 'VD: NV001', true)}
-            {renderField('Họ tên', 'fullName', 'text', '', true)}
-            {renderField('Ngày sinh', 'birthday', 'date')}
+            {renderField('Employee ID', 'employeeId', 'text', 'e.g. NV001', true)}
+            {renderField('Full Name', 'fullName', 'text', '', true)}
+            {renderField('Date of Birth', 'birthday', 'date')}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {renderField('Email', 'email', 'email', 'email@company.com')}
-            {renderField('Số điện thoại', 'phone', 'tel')}
-            {renderField('Link CV', 'cvURL', 'url', 'https://...')}
+            {renderField('Phone Number', 'phone', 'tel')}
+            {renderField('CV Link', 'cvURL', 'url', 'https://...')}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {renderField('Phòng ban', 'department')}
+            {renderField('Department', 'department')}
             {renderField('Team', 'team')}
-            {renderField('Vị trí', 'position')}
+            {renderField('Position', 'position')}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {renderField('Chi nhánh', 'branch')}
-            {renderField('Ngày bắt đầu', 'startDate', 'date')}
-            {renderField('Ngày kết thúc', 'endDate', 'date')}
+            {renderField('Branch', 'branch')}
+            {renderField('Start Date', 'startDate', 'date')}
+            {renderField('End Date', 'endDate', 'date')}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {renderField('Lương cơ bản (VND)', 'baseSalary', 'number', '15000000')}
+            {renderField('Base Salary (VND)', 'baseSalary', 'number', '15000000')}
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Tỷ lệ lương (%)</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Salary Percentage (%)</label>
               <input
                 type="number" min="0" max="100"
                 value={form.salaryPercentage || 100}
@@ -86,13 +86,13 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving }) => {
               onChange={(e) => setForm({ ...form, active: e.target.checked })}
               className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
             />
-            <label htmlFor="active" className="ml-2 block text-sm text-gray-900">Nhân sự đang hoạt động</label>
+            <label htmlFor="active" className="ml-2 block text-sm text-gray-900">Employee is active</label>
           </div>
         </form>
         <div className="p-4 border-t flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">Huỷ</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">Cancel</button>
           <button type="submit" onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 disabled:opacity-50">
-            {saving ? 'Đang lưu...' : (isEditing ? 'Lưu thay đổi' : 'Thêm nhân sự')}
+            {saving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Add Employee')}
           </button>
         </div>
       </div>
@@ -121,7 +121,7 @@ export default function EmployeesPage() {
         setLoading(false);
       });
     }).catch(err => {
-      addToast({ type: 'error', message: 'Không thể tải dữ liệu nhân sự.' });
+      addToast({ type: 'error', message: 'Could not load employee data.' });
       console.error(err);
       setLoading(false);
     });
@@ -152,7 +152,7 @@ export default function EmployeesPage() {
 
   const handleSave = async (formData, isEditing) => {
     if (!formData.employeeId || !formData.fullName) {
-      addToast({ type: 'error', message: 'Mã nhân viên và Họ tên là bắt buộc.' });
+      addToast({ type: 'error', message: 'Employee ID and Full Name are required.' });
       return;
     }
     setSaving(true);
@@ -180,10 +180,10 @@ export default function EmployeesPage() {
       };
       
       await set(targetRef, employeeData);
-      addToast({ type: 'success', message: isEditing ? 'Cập nhật thành công!' : 'Thêm nhân sự thành công!' });
+      addToast({ type: 'success', message: isEditing ? 'Update successful!' : 'Employee added successfully!' });
       handleCloseModal();
     } catch (err) {
-      addToast({ type: 'error', message: 'Lỗi khi lưu thông tin.' });
+      addToast({ type: 'error', message: 'Error saving information.' });
       console.error(err);
     } finally {
       setSaving(false);
@@ -195,9 +195,9 @@ export default function EmployeesPage() {
       const { database, ref, update } = await getDb();
       const newStatus = emp.active === false;
       await update(ref(database, `employees/${emp.id}`), { active: newStatus });
-      addToast({ type: 'success', message: `Đã ${newStatus ? 'kích hoạt' : 'vô hiệu hoá'} nhân sự.` });
+      addToast({ type: 'success', message: `Employee ${newStatus ? 'activated' : 'deactivated'}.` });
     } catch {
-      addToast({ type: 'error', message: 'Không thể thay đổi trạng thái.' });
+      addToast({ type: 'error', message: 'Could not change status.' });
     }
   };
 
@@ -206,14 +206,14 @@ export default function EmployeesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Quản lý Nhân sự</h1>
-          <p className="text-gray-500 mt-1">Thêm, sửa, và quản lý thông tin nhân viên.</p>
+          <h1 className="text-3xl font-bold text-gray-800">Employee Management</h1>
+          <p className="text-gray-500 mt-1">Add, edit, and manage employee information.</p>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative flex-grow">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
-              placeholder="Tìm kiếm nhân viên..."
+              placeholder="Search employees..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 outline-none"
@@ -224,7 +224,7 @@ export default function EmployeesPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg shadow-sm hover:bg-red-700 transition-colors duration-200"
           >
             <UserPlus size={18} />
-            <span className="hidden sm:inline">Thêm mới</span>
+            <span className="hidden sm:inline">Add New</span>
           </button>
         </div>
       </div>
@@ -234,21 +234,21 @@ export default function EmployeesPage() {
         <table className="min-w-full border border-gray-200 text-sm text-gray-700">
           <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
             <tr>
-              <th className="px-4 py-2 border">Mã NV</th>
-              <th className="px-4 py-2 border">Họ tên</th>
-              <th className="px-4 py-2 border">Phòng ban</th>
-              <th className="px-4 py-2 border">Vị trí</th>
+              <th className="px-4 py-2 border">Employee ID</th>
+              <th className="px-4 py-2 border">Full Name</th>
+              <th className="px-4 py-2 border">Department</th>
+              <th className="px-4 py-2 border">Position</th>
               <th className="px-4 py-2 border">Email</th>
-              <th className="px-4 py-2 border">SĐT</th>
-              <th className="px-4 py-2 border">Trạng thái</th>
-              <th className="px-4 py-2 border text-center">Hành động</th>
+              <th className="px-4 py-2 border">Phone</th>
+              <th className="px-4 py-2 border">Status</th>
+              <th className="px-4 py-2 border text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="8" className="text-center py-6">Đang tải dữ liệu...</td></tr>
+              <tr><td colSpan="8" className="text-center py-6">Loading data...</td></tr>
             ) : filteredEmployees.length === 0 ? (
-              <tr><td colSpan="8" className="text-center py-6 text-gray-500">Không có nhân sự nào</td></tr>
+              <tr><td colSpan="8" className="text-center py-6 text-gray-500">No employees found</td></tr>
             ) : (
               filteredEmployees.map(emp => (
                 <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
@@ -274,7 +274,7 @@ export default function EmployeesPage() {
                       onClick={() => handleToggleActive(emp)}
                       className={`px-2 py-1 text-sm rounded ${emp.active !== false ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}
                     >
-                      {emp.active !== false ? 'Vô hiệu' : 'Kích hoạt'}
+                      {emp.active !== false ? 'Deactivate' : 'Activate'}
                     </button>
                   </td>
                 </tr>

@@ -23,8 +23,8 @@ const SalaryTable = ({ data }) => {
     return (
       <div className="text-center py-12 bg-white rounded-lg shadow-sm">
         <Calendar size={48} className="mx-auto text-gray-300" />
-        <h3 className="mt-4 text-lg font-medium text-gray-700">Không có dữ liệu lương</h3>
-        <p className="mt-1 text-sm text-gray-500">Chưa có bản ghi công việc nào cho tháng đã chọn.</p>
+        <h3 className="mt-4 text-lg font-medium text-gray-700">No salary data</h3>
+        <p className="mt-1 text-sm text-gray-500">No work records for the selected month.</p>
       </div>
     );
   }
@@ -34,15 +34,15 @@ const SalaryTable = ({ data }) => {
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th scope="col" className="py-3.5 px-4 text-left text-sm font-semibold text-gray-600 flex items-center gap-2"><User size={16} />Nhân viên</th>
-            <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-gray-600">Lương cơ bản</th>
-            <th scope="col" className="py-3.5 px-4 text-center text-sm font-semibold text-gray-600">Ngày công</th>
-            <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-gray-600">Lương theo ngày</th>
-            <th scope="col" className="py-3.5 px-4 text-center text-sm font-semibold text-gray-600">Giờ OT</th>
-            <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-gray-600">Lương OT</th>
-            <th scope="col" className="py-3.5 px-4 text-center text-sm font-semibold text-gray-600">Ngày CN</th>
-            <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-gray-600">Lương CN</th>
-            <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-red-600">Tổng lương</th>
+            <th scope="col" className="py-3.5 px-4 text-left text-sm font-semibold text-gray-600 flex items-center gap-2"><User size={16} />Employee</th>
+            <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-gray-600">Base Salary</th>
+            <th scope="col" className="py-3.5 px-4 text-center text-sm font-semibold text-gray-600">Work Days</th>
+            <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-gray-600">Daily Salary</th>
+            <th scope="col" className="py-3.5 px-4 text-center text-sm font-semibold text-gray-600">OT Hours</th>
+            <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-gray-600">OT Salary</th>
+            <th scope="col" className="py-3.5 px-4 text-center text-sm font-semibold text-gray-600">Sunday Work Days</th>
+            <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-gray-600">Sunday Salary</th>
+            <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-red-600">Total Salary</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
@@ -188,21 +188,21 @@ const SalaryPage = () => {
 
   const handleExport = () => {
     const dataToExport = salaryData.map(emp => ({
-      'Mã NV': emp.id,
-      'Họ và tên': emp.fullName || '—',
-      'Lương cơ bản': emp.baseSalary || 0,
-      'Ngày công': emp.workDays,
-      'Lương theo ngày': emp.baseSalaryCalculated,
-      'Giờ OT': emp.otHours,
-      'Lương OT': emp.otSalary,
-      'Ngày CN': emp.sundayWorkDays,
-      'Lương CN': emp.sundaySalary,
-      'Tổng lương': emp.totalSalary,
+      'Employee ID': emp.id,
+      'Full Name': emp.fullName || '—',
+      'Base Salary': emp.baseSalary || 0,
+      'Work Days': emp.workDays,
+      'Daily Salary': emp.baseSalaryCalculated,
+      'OT Hours': emp.otHours,
+      'OT Salary': emp.otSalary,
+      'Sunday Work Days': emp.sundayWorkDays,
+      'Sunday Salary': emp.sundaySalary,
+      'Total Salary': emp.totalSalary,
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Bảng lương');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Salary Sheet');
 
     // Auto-size columns
     const cols = Object.keys(dataToExport[0] || {});
@@ -223,12 +223,12 @@ const SalaryPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Bảng lương</h1>
-          <p className="text-gray-500 mt-1">Tổng quan lương nhân viên cho tháng đã chọn.</p>
+          <h1 className="text-3xl font-bold text-gray-800">Salary Sheet</h1>
+          <p className="text-gray-500 mt-1">Overview of employee salaries for the selected month.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg shadow-sm border border-gray-200">
-            <label htmlFor="month" className="text-sm font-medium text-gray-600 pl-2">Tháng:</label>
+            <label htmlFor="month" className="text-sm font-medium text-gray-600 pl-2">Month:</label>
             <input
               type="month"
               id="month"
@@ -243,17 +243,17 @@ const SalaryPage = () => {
             className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
           >
             <Download size={18} />
-            <span>Xuất Excel</span>
+            <span>Export Excel</span>
           </button>
         </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard icon={<DollarSign size={24} className="text-green-600" />} label="Tổng lương chi trả" value={summaryStats.totalSalary.toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' ₫'} color="bg-green-100" />
-        <StatCard icon={<Briefcase size={24} className="text-blue-600" />} label="Tổng ngày công" value={summaryStats.totalWorkDays} color="bg-blue-100" />
-        <StatCard icon={<Clock size={24} className="text-orange-600" />} label="Tổng giờ OT" value={summaryStats.totalOtHours} color="bg-orange-100" />
-        <StatCard icon={<TrendingUp size={24} className="text-purple-600" />} label="Lương trung bình" value={(summaryStats.totalEmployees > 0 ? (summaryStats.totalSalary / summaryStats.totalEmployees) : 0).toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' ₫'} color="bg-purple-100" />
+        <StatCard icon={<DollarSign size={24} className="text-green-600" />} label="Total Salary Paid" value={summaryStats.totalSalary.toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' ₫'} color="bg-green-100" />
+        <StatCard icon={<Briefcase size={24} className="text-blue-600" />} label="Total Work Days" value={summaryStats.totalWorkDays} color="bg-blue-100" />
+        <StatCard icon={<Clock size={24} className="text-orange-600" />} label="Total OT Hours" value={summaryStats.totalOtHours} color="bg-orange-100" />
+        <StatCard icon={<TrendingUp size={24} className="text-purple-600" />} label="Average Salary" value={(summaryStats.totalEmployees > 0 ? (summaryStats.totalSalary / summaryStats.totalEmployees) : 0).toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' ₫'} color="bg-purple-100" />
       </div>
 
       {/* Salary Table */}

@@ -21,7 +21,7 @@ export default function EmployeeCheckin() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [location, setLocation] = useState({ lat: null, lng: null, address: '' });
   const [wifiInfo, setWifiInfo] = useState({
-    ssid: 'Đang kiểm tra...',
+    ssid: 'Checking...',
     available: false,
     ip: null,
     localIP: null,
@@ -92,21 +92,21 @@ export default function EmployeeCheckin() {
   // Geolocation
   useEffect(() => {
     if (!navigator.geolocation) {
-      setLocation({ lat: null, lng: null, address: 'Trình duyệt không hỗ trợ Geolocation' });
+      setLocation({ lat: null, lng: null, address: 'Browser does not support Geolocation' });
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-setLocation({ lat: latitude, lng: longitude, address: 'Đang tải địa chỉ...' });
+setLocation({ lat: latitude, lng: longitude, address: 'Loading address...' });
 
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
           .then(res => res.json())
-          .then(data => setLocation(prev => ({ ...prev, address: data.display_name || 'Không xác định' })))
-          .catch(() => setLocation(prev => ({ ...prev, address: 'Không thể lấy địa chỉ' })));
+          .then(data => setLocation(prev => ({ ...prev, address: data.display_name || 'Unknown' })))
+          .catch(() => setLocation(prev => ({ ...prev, address: 'Could not retrieve address' })));
       },
       () => {
-        setLocation({ lat: null, lng: null, address: 'Không thể lấy vị trí' });
+        setLocation({ lat: null, lng: null, address: 'Could not retrieve location' });
       },
       { maximumAge: 60 * 1000, timeout: 5000 }
     );
@@ -115,7 +115,7 @@ setLocation({ lat: latitude, lng: longitude, address: 'Đang tải địa chỉ.
   // ---------- Wifi & IP detection ----------
   const detectWifiAndIP = async () => {
     try {
-      setWifiInfo(prev => ({ ...prev, ssid: 'Đang kiểm tra IP...', verified: false }));
+      setWifiInfo(prev => ({ ...prev, ssid: 'Checking IP...', verified: false }));
       let connectionType = 'unknown';
       if ('connection' in navigator) {
         const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -152,25 +152,25 @@ setLocation({ lat: latitude, lng: longitude, address: 'Đang tải địa chỉ.
   const matchedWifi = checkIPAgainstCompanyWifis(publicIP, localIP);
 
       setWifiInfo({
-        ssid: matchedWifi ? matchedWifi.name : 'WiFi không xác định',
+        ssid: matchedWifi ? matchedWifi.name : 'Unknown WiFi',
         available: !!matchedWifi,
         verified: !!matchedWifi,
-        ip: publicIP || 'Không lấy được',
+        ip: publicIP || 'Not available',
         localIP: localIP,
         connectionType
       });
 
       if (!publicIP) {
-        setStatus({ type: 'error', message: '⚠️ Không thể lấy IP public. Vui lòng kiểm tra kết nối mạng.' });
+        setStatus({ type: 'error', message: '⚠️ Could not retrieve public IP. Please check your network connection.' });
         setTimeout(() => setStatus({ type: '', message: '' }), 3000);
       }
     } catch (error) {
       console.error('Error detecting wifi:', error);
       setWifiInfo({
-        ssid: 'Không thể xác định WiFi',
+        ssid: 'Could not determine WiFi',
         available: false,
         verified: false,
-        ip: 'Lỗi kết nối',
+        ip: 'Connection error',
         localIP: null,
         connectionType: 'unknown'
       });
@@ -242,12 +242,12 @@ pc.onicecandidate = (ice) => {
   // ---------- Firebase init ----------
   const initFirebase = async () => {
     try {
-      setStatus({ type: 'info', message: 'Đang kết nối Firebase...' });
+      setStatus({ type: 'info', message: 'Connecting to Firebase...' });
   const dbMod = await getDb();
   const { database, ref, onValue } = dbMod;
       setDb(dbMod);
       setFirebaseConfigured(true);
-      setStatus({ type: 'success', message: '✅ Kết nối Firebase thành công!' });
+      setStatus({ type: 'success', message: '✅ Firebase connected successfully!' });
 
       // Load checkins
       loadCheckinsFromFirebase(database, ref, onValue);
@@ -261,7 +261,7 @@ pc.onicecandidate = (ice) => {
       setTimeout(() => setStatus({ type: '', message: '' }), 2500);
     } catch (error) {
       console.error('Firebase error:', error);
-      setStatus({ type: 'error', message: '❌ Lỗi kết nối Firebase: ' + (error?.message || error) });
+      setStatus({ type: 'error', message: '❌ Firebase connection error: ' + (error?.message || error) });
     }
   };
 
@@ -315,21 +315,21 @@ pc.onicecandidate = (ice) => {
   // ---------- Checkin flow ----------
   const handleCheckin = async (type) => {
     if (!firebaseConfigured) {
-      setStatus({ type: 'error', message: '⚠️ Firebase chưa kết nối. Vui lòng đợi...' });
+      setStatus({ type: 'error', message: '⚠️ Firebase not connected. Please wait...' });
       return;
     }
     if (!employee.name || !employee.id) {
-      setStatus({ type: 'error', message: '⚠️ Vui lòng nhập đầy đủ thông tin nhân viên!' });
+      setStatus({ type: 'error', message: '⚠️ Please enter full employee information!' });
       return;
     }
     // Validate employee ID tồn tại và đang active
     const emp = employeesMap[employee.id];
     if (!emp) {
-      setStatus({ type: 'error', message: '⚠️ Mã nhân viên không tồn tại trong hệ thống.' });
+      setStatus({ type: 'error', message: '⚠️ Employee ID does not exist in the system.' });
       return;
     }
     if (emp.active === false) {
-      setStatus({ type: 'error', message: '⚠️ Nhân viên đang ở trạng thái Inactive, không thể check-in.' });
+      setStatus({ type: 'error', message: '⚠️ Employee is Inactive, cannot check-in.' });
       return;
     }
     // Auto-fill tên chuẩn từ danh sách nếu khác
@@ -337,7 +337,7 @@ pc.onicecandidate = (ice) => {
       setEmployee(prev => ({ ...prev, name: emp.fullName }));
     }
     if (!wifiInfo.verified) {
-      setStatus({ type: 'error', message: '⚠️ WiFi chưa được xác thực. Vui lòng kết nối WiFi công ty để check-in.' });
+      setStatus({ type: 'error', message: '⚠️ WiFi not verified. Please connect to company WiFi to check-in.' });
       return;
     }
 
@@ -356,7 +356,7 @@ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
       setCameraStream(stream);
       if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (error) {
-      setStatus({ type: 'error', message: '❌ Không thể truy cập camera: ' + error.message });
+      setStatus({ type: 'error', message: '❌ Cannot access camera: ' + error.message });
       setShowCamera(false);
     }
   };
@@ -417,16 +417,16 @@ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
   // Confirm and save checkin:
   const confirmCheckin = async () => {
     if (!capturedPhoto) {
-      setStatus({ type: 'error', message: '⚠️ Vui lòng chụp ảnh!' });
+      setStatus({ type: 'error', message: '⚠️ Please take a photo!' });
       return;
     }
     if (!db) {
-      setStatus({ type: 'error', message: '⚠️ Firebase chưa sẵn sàng!' });
+      setStatus({ type: 'error', message: '⚠️ Firebase not ready!' });
       return;
     }
 
     setLoading(true);
-    setStatus({ type: 'info', message: '⏳ Đang lưu...' });
+    setStatus({ type: 'info', message: '⏳ Saving...' });
     setThankYouMessage(true);
     setTimeout(() => setThankYouMessage(false), 5000); // Ẩn sau 5 giây
 
@@ -488,14 +488,14 @@ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
       setCapturedPhoto(null);
       setCheckInType(null);
 
-      setStatus({ type: 'success', message: '✅ Bạn đã check-in thành công!' });
+      setStatus({ type: 'success', message: '✅ You have checked in successfully!' });
       setTimeout(() => setStatus({ type: '', message: '' }), 4000);
 
       // Upload to Vercel Blob in background and update record with photoURL
       uploadToVercelBlobInBackground(capturedPhoto, employee.id, Date.now(), newKey);
     } catch (error) {
       console.error('Save error:', error);
-      setStatus({ type: 'error', message: '❌ Lỗi khi lưu dữ liệu: ' + (error?.message || error) });
+      setStatus({ type: 'error', message: '❌ Error saving data: ' + (error?.message || error) });
     } finally {
       setLoading(false);
     }
@@ -540,28 +540,28 @@ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
 
   const _clearHistory = async () => {
     if (!firebaseConfigured) {
-      setStatus({ type: 'error', message: '⚠️ Firebase chưa được cấu hình!' });
+      setStatus({ type: 'error', message: '⚠️ Firebase not configured!' });
       return;
     }
-    if (!window.confirm('Bạn có chắc muốn xóa toàn bộ lịch sử check-in?')) return;
+    if (!window.confirm('Are you sure you want to delete all check-in history?')) return;
 
     try {
       const { database, ref, remove } = db;
       const checkinsRef = ref(database, 'checkins');
       await remove(checkinsRef);
-      setStatus({ type: 'success', message: '✅ Đã xóa lịch sử!' });
+      setStatus({ type: 'success', message: '✅ History deleted!' });
       setTimeout(() => setStatus({ type: '', message: '' }), 3000);
     } catch (error) {
-      setStatus({ type: 'error', message: '❌ Lỗi khi xóa dữ liệu: ' + error.message });
+      setStatus({ type: 'error', message: '❌ Error deleting data: ' + error.message });
     }
   };
 
   // Format helpers
-  const formatTime = (date) => date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const formatDate = (date) => date.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const formatTime = (date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const formatDate = (date) => date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const _formatTimestamp = (ts) => {
     const date = new Date(ts);
-return date.toLocaleString('vi-VN');
+return date.toLocaleString('en-US');
   };
 
   return (
@@ -570,7 +570,7 @@ return date.toLocaleString('vi-VN');
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-            <h1 className="text-3xl font-bold text-center">Hệ thống Check-in Nhân viên</h1>
+            <h1 className="text-3xl font-bold text-center">Employee Check-in System</h1>
           </div>
 
           {/* Time */}
@@ -583,7 +583,7 @@ return date.toLocaleString('vi-VN');
           <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <User className="inline mr-2" size={18} /> Tên nhân viên
+                <User className="inline mr-2" size={18} /> Employee Name
               </label>
               <input
                 type="text"
@@ -591,13 +591,13 @@ return date.toLocaleString('vi-VN');
                 onChange={(e) => setEmployee({ ...employee, name: e.target.value })}
                 disabled={!!employeesMap[employee.id]}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Nhập tên nhân viên"
+                placeholder="Enter employee name"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <User className="inline mr-2" size={18} /> Mã nhân viên
+                <User className="inline mr-2" size={18} /> Employee ID
               </label>
               <input
                 type="text"
@@ -609,7 +609,7 @@ return date.toLocaleString('vi-VN');
                   try { if (newId) localStorage.setItem('employeeId', newId); } catch { /* ignore */ }
                 }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Nhập mã nhân viên"
+                placeholder="Enter employee ID"
               />
             </div>
 
@@ -621,12 +621,12 @@ return date.toLocaleString('vi-VN');
                     <Wifi className={wifiInfo.verified ? "text-green-500" : "text-orange-500"} size={20} />
                     <span className="ml-2 font-medium">WiFi:</span>
                     <span className="ml-2">{wifiInfo.ssid}</span>
-                    {wifiInfo.verified && <span className="ml-2 text-green-600">✅ Xác thực</span>}
+                    {wifiInfo.verified && <span className="ml-2 text-green-600">✅ Verified</span>}
                   </div>
                   <div className="text-sm text-gray-600 space-y-1 bg-white p-2 rounded border">
                     <div className="flex items-center justify-between">
 <span className="font-medium">🌍 Public IP:</span>
-                      <span className="font-mono text-blue-600 font-bold">{wifiInfo.ip || 'Đang lấy...'}</span>
+                      <span className="font-mono text-blue-600 font-bold">{wifiInfo.ip || 'Fetching...'}</span>
                     </div>
                     {wifiInfo.localIP && (
                       <div className="flex items-center justify-between">
@@ -652,7 +652,7 @@ return date.toLocaleString('vi-VN');
               {!wifiInfo.verified && (
                 <div className="mt-2 flex items-start text-xs text-orange-700">
                   <AlertCircle size={14} className="mr-1 mt-0.5" />
-                  <span>WiFi chưa được xác thực. Vui lòng kết nối WiFi công ty hoặc thêm WiFi vào danh sách.</span>
+                  <span>WiFi not verified. Please connect to company WiFi or add WiFi to the list.</span>
                 </div>
               )}
             </div>
@@ -662,10 +662,10 @@ return date.toLocaleString('vi-VN');
               <div className="flex items-start text-gray-700">
                 <MapPin className="text-red-500 mt-1" size={20} />
                 <div className="ml-2">
-                  <div className="font-medium">Vị trí:</div>
-                  <div className="text-sm text-gray-600">{location.address || 'Đang lấy vị trí...'}</div>
+                  <div className="font-medium">Location:</div>
+                  <div className="text-sm text-gray-600">{location.address || 'Fetching location...'}</div>
                   {location.lat && location.lng && (
-                    <div className="text-xs text-gray-500 mt-1">Tọa độ: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</div>
+                    <div className="text-xs text-gray-500 mt-1">Coordinates: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</div>
                   )}
                 </div>
               </div>
@@ -691,11 +691,11 @@ return date.toLocaleString('vi-VN');
                   !employeesMap[employee.id] ||
                   employeesMap[employee.id]?.active === false
                 }
-                title={!wifiInfo.verified ? 'Chỉ cho phép check-in khi WiFi công ty được xác thực' : ''}
+                title={!wifiInfo.verified ? 'Only allowed to check-in when company WiFi is verified' : ''}
                 className="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 <LogIn className="mr-2" size={20} />
-                {loading ? 'Đang xử lý...' : 'Check In'}
+                {loading ? 'Processing...' : 'Check In'}
               </button>
               <button
                 onClick={() => handleCheckin('out')}
@@ -707,11 +707,11 @@ return date.toLocaleString('vi-VN');
                   !employeesMap[employee.id] ||
                   employeesMap[employee.id]?.active === false
                 }
-                title={!wifiInfo.verified ? 'Chỉ cho phép check-out khi WiFi công ty được xác thực' : ''}
+                title={!wifiInfo.verified ? 'Only allowed to check-out when company WiFi is verified' : ''}
                 className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-6 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 <LogOut className="mr-2" size={20} />
-                {loading ? 'Đang xử lý...' : 'Check Out'}
+                {loading ? 'Processing...' : 'Check Out'}
               </button>
             </div>
             {/* 
@@ -799,7 +799,7 @@ return date.toLocaleString('vi-VN');
               <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex justify-between items-center">
                   <h2 className="text-xl font-bold">
-                    <Camera className="inline mr-2" size={24} /> Chụp ảnh khuôn mặt
+                    <Camera className="inline mr-2" size={24} /> Take a photo of your face
                   </h2>
                   <button onClick={cancelCamera} className="hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition">
                     <X size={24} />
@@ -816,10 +816,10 @@ return date.toLocaleString('vi-VN');
                         </div>
                       </div>
 
-                      <div className="text-center text-gray-600 text-sm">📸 Đặt khuôn mặt vào khung tròn và nhấn nút chụp</div>
+                      <div className="text-center text-gray-600 text-sm">📸 Place your face in the circle and press the capture button</div>
 
                       <button onClick={capturePhoto} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition flex items-center justify-center">
-                        <Camera className="mr-2" size={20} /> Chụp ảnh
+                        <Camera className="mr-2" size={20} /> Take Photo
                       </button>
                     </div>
                   ) : (
@@ -828,12 +828,12 @@ return date.toLocaleString('vi-VN');
                         <img src={capturedPhoto} alt="Captured" className="w-full h-auto" />
                       </div>
 
-                      <div className="text-center text-gray-600 text-sm">✅ Ảnh đã được chụp. Vui lòng kiểm tra và xác nhận.</div>
+                      <div className="text-center text-gray-600 text-sm">✅ Photo captured. Please review and confirm.</div>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <button onClick={retakePhoto} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition">Chụp lại</button>
+                        <button onClick={retakePhoto} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition">Retake</button>
                         <button onClick={confirmCheckin} disabled={loading} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed">
-                          {loading ? 'Đang lưu...' : 'Xác nhận'}
+                          {loading ? 'Saving...' : 'Confirm'}
                         </button>
                       </div>
                     </div>
@@ -844,7 +844,7 @@ return date.toLocaleString('vi-VN');
           )}
           {thankYouMessage && (
             <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full shadow-lg text-lg font-semibold animate-fadeIn">
-              💙 Kama cảm ơn bạn đã cống hiến 💙
+              💙 Kama thanks you for your dedication 💙
             </div>
           )}
 

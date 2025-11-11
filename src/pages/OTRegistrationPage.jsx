@@ -15,11 +15,11 @@ const OTRegistrationPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser) {
-      alert('Bạn cần đăng nhập để đăng ký OT');
+      alert('You need to log in to register for OT');
       return;
     }
     if (!date || !startTime || !endTime || !reason) {
-      alert('Vui lòng điền đầy đủ thông tin');
+      alert('Please fill in all information');
       return;
     }
 
@@ -38,11 +38,11 @@ const OTRegistrationPage = () => {
         status: 'pending', // pending, approved, rejected
         createdAt: serverTimestamp(),
       });
-      alert('Đăng ký OT thành công!');
+      alert('OT registration successful!');
       navigate('/'); // Redirect to home or another page
     } catch (error) {
       console.error('Error submitting OT registration:', error);
-      alert('Đã có lỗi xảy ra, vui lòng thử lại.');
+      alert('An error occurred, please try again.');
     } finally {
       setLoading(false);
     }
@@ -50,12 +50,12 @@ const OTRegistrationPage = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Đăng ký làm thêm giờ (OT)</h1>
+      <h1 className="text-2xl font-bold mb-4">Overtime (OT) Registration</h1>
       <div className="max-w-md mx-auto bg-white p-8 border border-gray-300 rounded-lg shadow-md">
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label htmlFor="date" className="block text-gray-700 font-bold mb-2">
-              Ngày
+              Date
             </label>
             <input
               type="date"
@@ -67,7 +67,7 @@ const OTRegistrationPage = () => {
           </div>
           <div className="mb-4">
             <label htmlFor="startTime" className="block text-gray-700 font-bold mb-2">
-              Thời gian bắt đầu
+              Start Time
             </label>
             <input
               type="time"
@@ -79,7 +79,7 @@ const OTRegistrationPage = () => {
           </div>
           <div className="mb-4">
             <label htmlFor="endTime" className="block text-gray-700 font-bold mb-2">
-              Thời gian kết thúc
+              End Time
             </label>
             <input
               type="time"
@@ -91,7 +91,7 @@ const OTRegistrationPage = () => {
           </div>
           <div className="mb-4">
             <label htmlFor="reason" className="block text-gray-700 font-bold mb-2">
-              Lý do
+              Reason
             </label>
             <textarea
               id="reason"
@@ -107,7 +107,7 @@ const OTRegistrationPage = () => {
               disabled={loading}
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:bg-gray-400"
             >
-              {loading ? 'Đang gửi...' : 'Đăng ký'}
+              {loading ? 'Submitting...' : 'Register'}
             </button>
           </div>
         </form>

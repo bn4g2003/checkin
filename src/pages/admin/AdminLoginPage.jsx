@@ -16,7 +16,7 @@ export default function AdminLoginPage() {
       localStorage.setItem('adminSession', 'true');
       navigate('/admin/dashboard');
     } else {
-      setError('Sai tài khoản hoặc mật khẩu');
+      setError('Error: Invalid username or password.');
     }
   };
 
@@ -25,15 +25,15 @@ export default function AdminLoginPage() {
       <form onSubmit={handleSubmit} className="w-full max-w-sm bg-white rounded-xl shadow-lg p-6 space-y-5">
         <h1 className="text-2xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600">Admin Login</h1>
         <div>
-          <label className="text-sm font-medium text-gray-700 flex items-center mb-1"><User size={16} className="mr-1"/>Tên đăng nhập</label>
+          <label className="text-sm font-medium text-gray-700 flex items-center mb-1"><User size={16} className="mr-1"/>User Name</label>
           <input name="username" value={form.username} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="admin" />
         </div>
         <div>
-          <label className="text-sm font-medium text-gray-700 flex items-center mb-1"><Lock size={16} className="mr-1"/>Mật khẩu</label>
+          <label className="text-sm font-medium text-gray-700 flex items-center mb-1"><Lock size={16} className="mr-1"/>Password</label>
           <input type="password" name="password" value={form.password} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="admin123" />
         </div>
         {error && <div className="text-red-600 text-sm">{error}</div>}
-        <button type="submit" className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition">Đăng nhập</button>
+        <button type="submit" className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition">Login</button>
       </form>
     </div>
   );

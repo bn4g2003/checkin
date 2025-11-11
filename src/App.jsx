@@ -23,7 +23,7 @@ export default function AppRouter() {
   return (
     <ToastProvider>
       <BrowserRouter>
-        <Suspense fallback={<div className="p-6 text-center">Đang tải...</div>}>
+        <Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
           <Routes>
           <Route path="/" element={<CheckinPage />} />
           <Route path="/ot-registration" element={<OTRegistrationPage />} />

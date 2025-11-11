@@ -301,7 +301,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Đang tải dữ liệu...</p>
+          <p className="text-gray-600">Loading data...</p>
         </div>
       </div>
     );
@@ -312,35 +312,35 @@ export default function DashboardPage() {
       <div className="max-w-full mx-auto space-y-6">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-600">
-          <h1 className="text-3xl font-bold text-red-800 mb-2">Bảng Điều Khiển</h1>
-          <p className="text-gray-600">Tổng quan và thống kê nhân sự</p>
+          <h1 className="text-3xl font-bold text-red-800 mb-2">Dashboard</h1>
+          <p className="text-gray-600">Overview and HR statistics</p>
         </div>
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold text-red-800 mb-4">Bộ lọc</h2>
+          <h2 className="text-lg font-semibold text-red-800 mb-4">Filters</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Chi nhánh</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
               <select
                 value={filters.branch}
                 onChange={(e) => setFilters({...filters, branch: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               >
-                <option value="">Tất cả</option>
+                <option value="">All</option>
                 {filterOptions.branches.map(branch => (
                   <option key={branch} value={branch}>{branch}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Phòng ban</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
               <select
                 value={filters.department}
                 onChange={(e) => setFilters({...filters, department: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               >
-                <option value="">Tất cả</option>
+                <option value="">All</option>
                 {filterOptions.departments.map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
@@ -353,20 +353,20 @@ export default function DashboardPage() {
                 onChange={(e) => setFilters({...filters, team: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               >
-                <option value="">Tất cả</option>
+                <option value="">All</option>
                 {filterOptions.teams.map(team => (
                   <option key={team} value={team}>{team}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Vị trí</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Position</label>
               <select
                 value={filters.position}
                 onChange={(e) => setFilters({...filters, position: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               >
-                <option value="">Tất cả</option>
+                <option value="">All</option>
                 {filterOptions.positions.map(position => (
                   <option key={position} value={position}>{position}</option>
                 ))}
@@ -385,10 +385,10 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Tổng nhân sự</p>
+                <p className="text-sm font-medium text-gray-600">Total Employees</p>
                 <p className="text-2xl font-bold text-red-800">{statistics.totalEmployees}</p>
                 <p className="text-xs text-green-600 mt-1">
-                  {statistics.activeEmployees} đang hoạt động
+                  {statistics.activeEmployees} active
                 </p>
               </div>
             </div>
@@ -402,10 +402,10 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Nhân sự Việt Nam</p>
+                <p className="text-sm font-medium text-gray-600">Vietnamese Employees</p>
                 <p className="text-2xl font-bold text-red-800">{statistics.vietnamEmployees}</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {statistics.otherBranches} nhân sự chi nhánh khác
+                  {statistics.otherBranches} employees from other branches
                 </p>
               </div>
             </div>
@@ -419,10 +419,10 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Đi làm hôm nay</p>
+                <p className="text-sm font-medium text-gray-600">Present today</p>
                 <p className="text-2xl font-bold text-red-800">{statistics.employeesCheckedInToday}</p>
                 <p className="text-xs text-red-600 mt-1">
-                  {statistics.lateEmployeesToday} nhân sự đi trễ
+                  {statistics.lateEmployeesToday} employees late
                 </p>
               </div>
             </div>
@@ -436,10 +436,10 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Check-in hôm nay</p>
+                <p className="text-sm font-medium text-gray-600">Check-ins today</p>
                 <p className="text-2xl font-bold text-red-800">{statistics.todayCheckins}</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {statistics.todayCheckins > 0 ? 'Hoạt động' : 'Chưa có check-in'}
+                  {statistics.todayCheckins > 0 ? 'Active' : 'No check-ins yet'}
                 </p>
               </div>
             </div>
@@ -450,7 +450,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Department Distribution Chart */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-red-800 mb-4">Phân bố nhân sự theo Phòng ban</h3>
+            <h3 className="text-lg font-semibold text-red-800 mb-4">Employee Distribution by Department</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData.departmentChartData}>
@@ -466,7 +466,7 @@ export default function DashboardPage() {
 
           {/* Branch Distribution Pie Chart */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-red-800 mb-4">Phân bố nhân sự theo Chi nhánh</h3>
+            <h3 className="text-lg font-semibold text-red-800 mb-4">Employee Distribution by Branch</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -493,7 +493,7 @@ export default function DashboardPage() {
 
         {/* Check-in Trend Chart */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-4">Xu hướng Check-in 7 ngày gần đây</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-4">Check-in Trend (Last 7 Days)</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData.checkinTrendData}>
@@ -502,8 +502,8 @@ export default function DashboardPage() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="checkins" stroke="#B91C1C" name="Số lượt check-in" />
-                <Line type="monotone" dataKey="employees" stroke="#10B981" name="Số nhân viên làm việc" />
+                <Line type="monotone" dataKey="checkins" stroke="#B91C1C" name="Number of check-ins" />
+                <Line type="monotone" dataKey="employees" stroke="#10B981" name="Number of employees working" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -511,7 +511,7 @@ export default function DashboardPage() {
 
         {/* Top Hardworking Employees Chart */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-4">Top 5 Nhân viên làm việc nhiều nhất</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-4">Top 5 Most Hardworking Employees</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData.topHardworkingData} layout="horizontal">
@@ -529,7 +529,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top 5 On Time */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Top 5 Nhân sự đi làm đúng giờ</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Top 5 Punctual Employees</h3>
             <div className="space-y-3">
               {performanceRankings.top5OnTime.map((emp, index) => (
                 <div key={emp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -549,19 +549,19 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-green-600">{emp.onTimeRate.toFixed(1)}%</p>
-                    <p className="text-xs text-gray-500">{emp.totalRecords} ngày</p>
+                    <p className="text-xs text-gray-500">{emp.totalRecords} days</p>
                   </div>
                 </div>
               ))}
               {performanceRankings.top5OnTime.length === 0 && (
-                <p className="text-gray-500 text-center py-4">Không có dữ liệu</p>
+                <p className="text-gray-500 text-center py-4">No data</p>
               )}
             </div>
           </div>
 
           {/* Most Hardworking */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Nhân sự chăm chỉ nhất</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Most Hardworking Employees</h3>
             <div className="space-y-3">
               {performanceRankings.mostHardworking.slice(0, 5).map((emp, index) => (
                 <div key={emp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -576,19 +576,19 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-blue-600">{emp.totalHours.toFixed(1)}h</p>
-                    <p className="text-xs text-gray-500">trung bình {emp.avgHoursPerDay.toFixed(1)}h/ngày</p>
+                    <p className="text-xs text-gray-500">average {emp.avgHoursPerDay.toFixed(1)}h/day</p>
                   </div>
                 </div>
               ))}
               {performanceRankings.mostHardworking.length === 0 && (
-                <p className="text-gray-500 text-center py-4">Không có dữ liệu</p>
+                <p className="text-gray-500 text-center py-4">No data</p>
               )}
             </div>
           </div>
 
           {/* Overtime Ranking */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Top OT (Giờ tăng ca)</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Top OT (Overtime Hours)</h3>
             <div className="space-y-3">
               {performanceRankings.overtimeRanking.slice(0, 5).map((emp, index) => (
                 <div key={emp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -603,19 +603,19 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-red-600">{emp.totalOvertime.toFixed(1)}h</p>
-                    <p className="text-xs text-gray-500">tăng ca</p>
+                    <p className="text-xs text-gray-500">overtime</p>
                   </div>
                 </div>
               ))}
               {performanceRankings.overtimeRanking.length === 0 && (
-                <p className="text-gray-500 text-center py-4">Không có dữ liệu</p>
+                <p className="text-gray-500 text-center py-4">No data</p>
               )}
             </div>
           </div>
 
           {/* All On Time Performance */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Tất cả nhân sự đi làm đúng giờ</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">All Punctual Employees</h3>
             <div className="max-h-64 overflow-y-auto">
               {performanceRankings.allOnTime.map((emp, index) => (
                 <div key={emp.id} className="flex items-center justify-between p-2 border-b border-gray-100">
@@ -627,7 +627,7 @@ export default function DashboardPage() {
                 </div>
               ))}
               {performanceRankings.allOnTime.length === 0 && (
-                <p className="text-gray-500 text-center py-4">Không có dữ liệu</p>
+                <p className="text-gray-500 text-center py-4">No data</p>
               )}
             </div>
           </div>
@@ -637,7 +637,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Birthday This Month */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Sinh nhật tháng này</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Birthdays this month</h3>
             {birthdayAndSeniority.birthdayThisMonth.length > 0 ? (
               <div className="space-y-3">
                 {birthdayAndSeniority.birthdayThisMonth.map((employee, index) => (
@@ -655,7 +655,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="text-right">
                       <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                        🎂 Sinh nhật
+                        🎂 Birthday
                       </span>
                     </div>
                   </div>
@@ -663,14 +663,14 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="text-sm text-gray-500 text-center py-4">
-                Không có nhân sự nào sinh nhật trong tháng này
+                No employees have birthdays this month
               </div>
             )}
           </div>
 
           {/* Seniority Statistics */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Thống kê thâm niên</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Seniority Statistics</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                 <div className="flex items-center">
@@ -678,8 +678,8 @@ export default function DashboardPage() {
                     <span className="text-xs font-medium text-red-600">🆕</span>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">Dưới 1 tháng</p>
-                    <p className="text-xs text-gray-500">Nhân sự mới</p>
+                    <p className="text-sm font-medium text-gray-900">Under 1 month</p>
+                    <p className="text-xs text-gray-500">New employees</p>
                   </div>
                 </div>
                 <span className="text-lg font-bold text-red-600">{birthdayAndSeniority.seniorityGroups.under1Month.length}</span>
@@ -691,8 +691,8 @@ export default function DashboardPage() {
                     <span className="text-xs font-medium text-yellow-600">📈</span>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">1-3 tháng</p>
-                    <p className="text-xs text-gray-500">Đang thích nghi</p>
+                    <p className="text-sm font-medium text-gray-900">1-3 months</p>
+                    <p className="text-xs text-gray-500">Adapting</p>
                   </div>
                 </div>
                 <span className="text-lg font-bold text-yellow-600">{birthdayAndSeniority.seniorityGroups.month1to3.length}</span>
@@ -704,8 +704,8 @@ export default function DashboardPage() {
                     <span className="text-xs font-medium text-blue-600">⭐</span>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">3-6 tháng</p>
-                    <p className="text-xs text-gray-500">Đã ổn định</p>
+                    <p className="text-sm font-medium text-gray-900">3-6 months</p>
+                    <p className="text-xs text-gray-500">Stable</p>
                   </div>
                 </div>
                 <span className="text-lg font-bold text-blue-600">{birthdayAndSeniority.seniorityGroups.month3to6.length}</span>
@@ -717,8 +717,8 @@ export default function DashboardPage() {
                     <span className="text-xs font-medium text-green-600">💎</span>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">6-12 tháng</p>
-                    <p className="text-xs text-gray-500">Nhân sự cốt cán</p>
+                    <p className="text-sm font-medium text-gray-900">6-12 months</p>
+                    <p className="text-xs text-gray-500">Core employees</p>
                   </div>
                 </div>
                 <span className="text-lg font-bold text-green-600">{birthdayAndSeniority.seniorityGroups.month6to12.length}</span>
@@ -730,8 +730,8 @@ export default function DashboardPage() {
                     <span className="text-xs font-medium text-purple-600">👑</span>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">Trên 1 năm</p>
-                    <p className="text-xs text-gray-500">Nhân sự chủ chốt</p>
+                    <p className="text-sm font-medium text-gray-900">Over 1 year</p>
+                    <p className="text-xs text-gray-500">Key employees</p>
                   </div>
                 </div>
                 <span className="text-lg font-bold text-purple-600">{birthdayAndSeniority.seniorityGroups.over12Months.length}</span>
