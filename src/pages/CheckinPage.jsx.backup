@@ -1,0 +1,740 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Clock,
+  Wifi,
+  MapPin,
+  User,
+  CheckCircle,
+  XCircle,
+  LogIn,
+  LogOut,
+  History,
+  AlertCircle,
+  Camera,
+  X
+} from 'lucide-react';
+import { put } from '@vercel/blob';
+
+export default function EmployeeCheckin() {
+  const [employee, setEmployee] = useState({ name: '', id: '' });
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [location, setLocation] = useState({ lat: null, lng: null, address: '' });
+  const [wifiInfo, setWifiInfo] = useState({
+    ssid: 'Đang kiểm tra...',
+    available: false,
+    ip: null,
+    localIP: null,
+    verified: false,
+    connectionType: 'unknown'
+  });
+  const [thankYouMessage, setThankYouMessage] = useState(false);
+  const [checkins, setCheckins] = useState([]);
+  const [status, setStatus] = useState({ type: '', message: '' });
+  const [loading, setLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [firebaseConfigured, setFirebaseConfigured] = useState(false);
+  const [db, setDb] = useState(null);
+  // const [companyWifis, setCompanyWifis] = useState([
+  //   { name: 'WiFi Văn phòng chính', ipRange: '192.168.1.', routerIP: '192.168.1.1' },
+  //   { name: 'WiFi Tầng 2', ipRange: '192.168.2.', routerIP: '192.168.2.1' },
+  //   { name: 'WiFi Guest', ipRange: '10.0.0.', routerIP: '10.0.0.1' },
+  // ]);
+  const [manualWifiName, setManualWifiName] = useState('');
+
+  // Camera states
+  const [showCamera, setShowCamera] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [checkInType, setCheckInType] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
+  // Firebase Config (giữ nguyên nếu bạn đã cấu hình)
+  const realFirebaseConfig = {
+    apiKey: "AIzaSyBIh7DjPUYn8myMy5w6xsE7JugQJkF3AJE",
+    authDomain: "chamcongkama.firebaseapp.com",
+    databaseURL: "https://chamcongkama-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "chamcongkama",
+    storageBucket: "chamcongkama.firebasestorage.app",
+    messagingSenderId: "559157471261",
+    appId: "1:559157471261:web:c35e4d776bab5a16cdbef4",
+    measurementId: "G-CDKMV99F6X"
+  };
+
+  // Init Firebase once
+  useEffect(() => {
+    initFirebase();
+  }, []);
+
+  // Clock
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Detect wifi + ip on mount
+  useEffect(() => {
+    detectWifiAndIP();
+  }, []);
+
+  // Geolocation
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocation({ lat: null, lng: null, address: 'Trình duyệt không hỗ trợ Geolocation' });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocation({ lat: latitude, lng: longitude, address: 'Đang tải địa chỉ...' });
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+          .then(res => res.json())
+          .then(data => setLocation(prev => ({ ...prev, address: data.display_name || 'Không xác định' })))
+          .catch(() => setLocation(prev => ({ ...prev, address: 'Không thể lấy địa chỉ' })));
+      },
+      (err) => {
+        setLocation({ lat: null, lng: null, address: 'Không thể lấy vị trí' });
+      },
+      { maximumAge: 60 * 1000, timeout: 5000 }
+    );
+  }, []);
+
+  // ---------- Wifi & IP detection ----------
+  const detectWifiAndIP = async () => {
+    try {
+      setWifiInfo(prev => ({ ...prev, ssid: 'Đang kiểm tra IP...', verified: false }));
+      let connectionType = 'unknown';
+      if ('connection' in navigator) {
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        connectionType = conn ? (conn.effectiveType || conn.type || 'unknown') : 'unknown';
+      }
+
+      let publicIP = null;
+      let localIP = null;
+
+      const ipServices = [
+        'https://api.ipify.org?format=json',
+        'https://api.bigdatacloud.net/data/client-ip',
+        'https://ipapi.co/json/',
+        'https://api.my-ip.io/ip.json'
+      ];
+
+      for (const service of ipServices) {
+        try {
+          const res = await fetch(service);
+          const data = await res.json();
+          publicIP = data.ip || data.ipString || data.IPv4 || null;
+          if (publicIP) break;
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      try {
+        localIP = await getLocalIP();
+      } catch (e) {
+        localIP = null;
+      }
+
+      const matchedWifi = checkIPAgainstCompanyWifis(localIP || publicIP);
+
+      setWifiInfo({
+        ssid: matchedWifi ? matchedWifi.name : (manualWifiName || 'WiFi không xác định'),
+        available: !!matchedWifi,
+        verified: !!matchedWifi,
+        ip: publicIP || 'Không lấy được',
+        localIP: localIP,
+        connectionType
+      });
+
+      if (!publicIP) {
+        setStatus({ type: 'error', message: '⚠️ Không thể lấy IP public. Vui lòng kiểm tra kết nối mạng.' });
+        setTimeout(() => setStatus({ type: '', message: '' }), 3000);
+      }
+    } catch (error) {
+      console.error('Error detecting wifi:', error);
+      setWifiInfo({
+        ssid: manualWifiName || 'Không thể xác định WiFi',
+        available: false,
+        verified: false,
+        ip: 'Lỗi kết nối',
+        localIP: null,
+        connectionType: 'unknown'
+      });
+    }
+  };
+
+  // WebRTC local IP
+  const getLocalIP = () => {
+    return new Promise((resolve, reject) => {
+      const pc = new RTCPeerConnection({ iceServers: [] });
+      try {
+        pc.createDataChannel('');
+        pc.createOffer()
+          .then(offer => pc.setLocalDescription(offer))
+          .catch(err => console.warn(err));
+
+        pc.onicecandidate = (ice) => {
+          if (!ice || !ice.candidate || !ice.candidate.candidate) return;
+          const ipRegex = /([0-9]{1,3}(\.[0-9]{1,3}){3})/;
+          const match = ipRegex.exec(ice.candidate.candidate);
+          if (match) {
+            resolve(match[1]);
+            pc.close();
+          }
+        };
+
+        setTimeout(() => {
+          try { pc.close(); } catch (e) {}
+          reject('Timeout');
+        }, 2500);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  };
+
+  const checkIPAgainstCompanyWifis = (ip) => {
+    // Temporarily disabled - will be loaded from Firebase companyWifis collection
+    if (!ip) return null;
+    // for (const wifi of companyWifis) {
+    //   if (ip.startsWith(wifi.ipRange)) return wifi;
+    // }
+    return null;
+  };
+
+  // ---------- Firebase init ----------
+  const initFirebase = async () => {
+    try {
+      setStatus({ type: 'info', message: 'Đang kết nối Firebase...' });
+
+      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+      const { getDatabase, ref, push, onValue, remove, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+
+      const app = initializeApp(realFirebaseConfig);
+      const database = getDatabase(app);
+
+      setDb({ database, ref, push, onValue, remove, update });
+      setFirebaseConfigured(true);
+      setStatus({ type: 'success', message: '✅ Kết nối Firebase thành công!' });
+
+      // Load checkins
+      loadCheckinsFromFirebase(database, ref, onValue);
+
+      setTimeout(() => setStatus({ type: '', message: '' }), 2500);
+    } catch (error) {
+      console.error('Firebase error:', error);
+      setStatus({ type: 'error', message: '❌ Lỗi kết nối Firebase: ' + (error?.message || error) });
+    }
+  };
+
+  const loadCheckinsFromFirebase = (database, ref, onValue) => {
+    try {
+      const checkinsRef = ref(database, 'checkins');
+      onValue(checkinsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const arr = Object.keys(data).map(k => ({ firebaseId: k, ...data[k] }));
+          arr.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          setCheckins(arr);
+        } else {
+          setCheckins([]);
+        }
+      });
+    } catch (e) {
+      console.error('Load checkins error', e);
+    }
+  };
+
+  // ---------- Checkin flow ----------
+  const handleCheckin = async (type) => {
+    if (!firebaseConfigured) {
+      setStatus({ type: 'error', message: '⚠️ Firebase chưa kết nối. Vui lòng đợi...' });
+      return;
+    }
+    if (!employee.name || !employee.id) {
+      setStatus({ type: 'error', message: '⚠️ Vui lòng nhập đầy đủ thông tin nhân viên!' });
+      return;
+    }
+
+    setCheckInType(type);
+    setCapturedPhoto(null);
+    setShowCamera(true);
+    startCamera();
+  };
+
+  // Camera start/stop
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+      });
+      setCameraStream(stream);
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    } catch (error) {
+      setStatus({ type: 'error', message: '❌ Không thể truy cập camera: ' + error.message });
+      setShowCamera(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      setCameraStream(null);
+    }
+    if (videoRef.current) {
+      try { 
+        videoRef.current.srcObject = null; 
+      } catch {
+        // Ignore errors when clearing video source
+      }
+    }
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+
+    // scale down
+    const maxWidth = 800, maxHeight = 600;
+    let width = video.videoWidth || 640;
+    let height = video.videoHeight || 480;
+
+    if (width > maxWidth) {
+      height = (maxWidth / width) * height;
+      width = maxWidth;
+    }
+    if (height > maxHeight) {
+      width = (maxHeight / height) * width;
+      height = maxHeight;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, width, height);
+
+    const photoData = canvas.toDataURL('image/jpeg', 0.6);
+    setCapturedPhoto(photoData);
+
+    // stop camera but keep modal open so user sees capturedPhoto immediately
+    stopCamera();
+  };
+
+  const retakePhoto = () => {
+    setCapturedPhoto(null);
+    startCamera();
+  };
+
+  const cancelCamera = () => {
+    stopCamera();
+    setShowCamera(false);
+    setCapturedPhoto(null);
+    setCheckInType(null);
+  };
+
+  // Confirm and save checkin:
+  const confirmCheckin = async () => {
+    if (!capturedPhoto) {
+      setStatus({ type: 'error', message: '⚠️ Vui lòng chụp ảnh!' });
+      return;
+    }
+    if (!db) {
+      setStatus({ type: 'error', message: '⚠️ Firebase chưa sẵn sàng!' });
+      return;
+    }
+
+    setLoading(true);
+    setStatus({ type: 'info', message: '⏳ Đang lưu...' });
+    setThankYouMessage(true);
+    setTimeout(() => setThankYouMessage(false), 5000); // Ẩn sau 5 giây
+
+    try {
+      const timestamp = new Date().toISOString();
+      const checkinData = {
+        employeeId: employee.id,
+        employeeName: employee.name,
+        type: checkInType,
+        timestamp,
+        photoBase64: capturedPhoto, // tạm lưu base64 để fallback nếu cần
+        location: {
+          lat: location.lat,
+          lng: location.lng,
+          address: location.address
+        },
+        wifi: {
+          ssid: wifiInfo.ssid,
+          verified: wifiInfo.verified,
+          publicIP: wifiInfo.ip,
+          localIP: wifiInfo.localIP,
+          connectionType: wifiInfo.connectionType
+        }
+      };
+
+      const checkinsRef = db.ref(db.database, 'checkins');
+      // push và lấy ref mới (key)
+      const newRef = await db.push(checkinsRef, checkinData);
+      const newKey = newRef.key || null;
+
+      // keep modal showing success UX, but clear capturedPhoto so next time fresh
+      setShowCamera(false);
+      setCapturedPhoto(null);
+      setCheckInType(null);
+
+      setStatus({ type: 'success', message: '✅ Bạn đã check-in thành công!' });
+      setTimeout(() => setStatus({ type: '', message: '' }), 4000);
+
+      // Upload to Vercel Blob in background and update record with photoURL
+      uploadToVercelBlobInBackground(capturedPhoto, employee.id, Date.now(), newKey);
+    } catch (error) {
+      console.error('Save error:', error);
+      setStatus({ type: 'error', message: '❌ Lỗi khi lưu dữ liệu: ' + (error?.message || error) });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper to convert dataURL to Blob
+  const dataURLtoBlob = (dataurl) => {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  };
+
+  // Background upload to Vercel Blob and update DB entry's photoURL
+  const uploadToVercelBlobInBackground = async (photoData, employeeId, timestampMs, recordKey) => {
+    if (!db || !recordKey) return;
+    try {
+      const photoFileName = `checkin-photos/${employeeId}_${timestampMs}.jpg`;
+      const blob = dataURLtoBlob(photoData);
+      const { url } = await put(photoFileName, blob, {
+        access: 'public',
+        addRandomSuffix: true, // để tránh trùng tên nếu cần
+      });
+
+      // update record
+      const updatePathRef = db.ref(db.database, `checkins/${recordKey}`);
+      await db.update(updatePathRef, { photoURL: url, photoBase64: null }); // xóa base64 để tiết kiệm không gian DB
+
+      console.log('✅ Ảnh đã được upload lên Vercel Blob:', url);
+    } catch (error) {
+      console.error('Background upload error:', error);
+    }
+  };
+
+  const _clearHistory = async () => {
+    if (!firebaseConfigured) {
+      setStatus({ type: 'error', message: '⚠️ Firebase chưa được cấu hình!' });
+      return;
+    }
+    if (!window.confirm('Bạn có chắc muốn xóa toàn bộ lịch sử check-in?')) return;
+
+    try {
+      const checkinsRef = db.ref(db.database, 'checkins');
+      await db.remove(checkinsRef);
+      setStatus({ type: 'success', message: '✅ Đã xóa lịch sử!' });
+      setTimeout(() => setStatus({ type: '', message: '' }), 3000);
+    } catch (error) {
+      setStatus({ type: 'error', message: '❌ Lỗi khi xóa dữ liệu: ' + error.message });
+    }
+  };
+
+  // Format helpers
+  const formatTime = (date) => date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const formatDate = (date) => date.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const _formatTimestamp = (ts) => {
+    const date = new Date(ts);
+    return date.toLocaleString('vi-VN');
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 w-full">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+            <h1 className="text-3xl font-bold text-center">Hệ thống Check-in Nhân viên</h1>
+          </div>
+
+          {/* Time */}
+          <div className="bg-indigo-50 p-6 text-center border-b">
+            <div className="text-4xl font-bold text-indigo-900 mb-2">{formatTime(currentTime)}</div>
+            <div className="text-indigo-600">{formatDate(currentTime)}</div>
+          </div>
+
+          {/* Form */}
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <User className="inline mr-2" size={18} /> Tên nhân viên
+              </label>
+              <input
+                type="text"
+                value={employee.name}
+                onChange={(e) => setEmployee({ ...employee, name: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Nhập tên nhân viên"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <User className="inline mr-2" size={18} /> Mã nhân viên
+              </label>
+              <input
+                type="text"
+                value={employee.id}
+                onChange={(e) => setEmployee({ ...employee, id: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Nhập mã nhân viên"
+              />
+            </div>
+
+            {/* Wifi info */}
+            {/* <div className={`p-4 rounded-lg border-2 ${wifiInfo.verified ? 'bg-green-50 border-green-300' : 'bg-orange-50 border-orange-300'}`}>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center text-gray-700 mb-2">
+                    <Wifi className={wifiInfo.verified ? "text-green-500" : "text-orange-500"} size={20} />
+                    <span className="ml-2 font-medium">WiFi:</span>
+                    <span className="ml-2">{wifiInfo.ssid}</span>
+                    {wifiInfo.verified && <span className="ml-2 text-green-600">✅ Xác thực</span>}
+                  </div>
+                  <div className="text-sm text-gray-600 space-y-1 bg-white p-2 rounded border">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">🌍 Public IP:</span>
+                      <span className="font-mono text-blue-600 font-bold">{wifiInfo.ip || 'Đang lấy...'}</span>
+                    </div>
+                    {wifiInfo.localIP && (
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">🏠 Local IP:</span>
+                        <span className="font-mono">{wifiInfo.localIP}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">📶 Connection:</span>
+                      <span>{wifiInfo.connectionType}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <button
+                    onClick={detectWifiAndIP}
+                    className="ml-2 text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1 bg-blue-50 rounded hover:bg-blue-100 transition"
+                  >
+                    🔄 Refresh
+                  </button>
+                  <button
+                    onClick={() => {
+                      const name = prompt('Nhập tên WiFi (manual):', manualWifiName || '');
+                      if (name !== null) {
+                        setManualWifiName(name);
+                        setWifiInfo(prev => ({ ...prev, ssid: name }));
+                      }
+                    }}
+                    className="mt-2 text-gray-600 text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
+                  >
+                    ✏️ Thêm WiFi tay
+                  </button>
+                </div>
+              </div>
+              {!wifiInfo.verified && (
+                <div className="mt-2 flex items-start text-xs text-orange-700">
+                  <AlertCircle size={14} className="mr-1 mt-0.5" />
+                  <span>WiFi chưa được xác thực. Vui lòng kết nối WiFi công ty hoặc thêm WiFi vào danh sách.</span>
+                </div>
+              )}
+            </div> */}
+
+            {/* Location */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex items-start text-gray-700">
+                <MapPin className="text-red-500 mt-1" size={20} />
+                <div className="ml-2">
+                  <div className="font-medium">Vị trí:</div>
+                  <div className="text-sm text-gray-600">{location.address || 'Đang lấy vị trí...'}</div>
+                  {location.lat && location.lng && (
+                    <div className="text-xs text-gray-500 mt-1">Tọa độ: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Status */}
+            {status.message && (
+              <div className={`p-4 rounded-lg flex items-center ${status.type === 'success' ? 'bg-green-50 text-green-800' : status.type === 'info' ? 'bg-blue-50 text-blue-800' : 'bg-red-50 text-red-800'}`}>
+                {status.type === 'success' ? <CheckCircle size={20} className="mr-2" /> : <XCircle size={20} className="mr-2" />}
+                <div className="whitespace-pre-line">{status.message}</div>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="grid grid-cols-2 gap-4 pt-4">
+              <button
+                onClick={() => handleCheckin('in')}
+                disabled={loading || !firebaseConfigured}
+                className="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                <LogIn className="mr-2" size={20} />
+                {loading ? 'Đang xử lý...' : 'Check In'}
+              </button>
+              <button
+                onClick={() => handleCheckin('out')}
+                disabled={loading || !firebaseConfigured}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-6 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                <LogOut className="mr-2" size={20} />
+                {loading ? 'Đang xử lý...' : 'Check Out'}
+              </button>
+            </div>
+{/* 
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition flex items-center justify-center"
+            >
+              <History className="mr-2" size={20} />
+              {showHistory ? 'Ẩn lịch sử' : `Xem lịch sử check-in (${checkins.length})`}
+            </button> */}
+          </div>
+
+          {/* History */}
+          {/* {showHistory && (
+            <div className="border-t bg-gray-50 p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-800">Lịch sử check-in</h3>
+                <div className="flex items-center gap-2">
+                  <button onClick={clearHistory} className="text-sm px-3 py-1 bg-red-500 text-white rounded">Xóa toàn bộ</button>
+                </div>
+              </div>
+
+              {checkins.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">Chưa có lịch sử check-in</p>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {checkins.map((checkin) => (
+                    <div key={checkin.firebaseId} className="bg-white p-4 rounded-lg border hover:shadow-md transition">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-3">
+                          {(checkin.photoURL || checkin.photoBase64) && (
+                            <img
+                              src={checkin.photoURL || checkin.photoBase64}
+                              alt="Check-in"
+                              className="w-16 h-16 rounded-lg object-cover border-2 border-gray-200"
+                            />
+                          )}
+                          <div>
+                            <div className="font-bold text-gray-800">{checkin.employeeName}</div>
+                            <div className="text-sm text-gray-500">ID: {checkin.employeeId}</div>
+                          </div>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${checkin.type === 'in' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+                          {checkin.type === 'in' ? '🟢 Check In' : '🟠 Check Out'}
+                        </span>
+                      </div>
+
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <div className="flex items-center">
+                          <Clock size={14} className="mr-2" /> {formatTimestamp(checkin.timestamp)}
+                        </div>
+                        <div className="flex items-center">
+                          <Wifi size={14} className="mr-2" /> {checkin.wifi?.ssid}
+                          {checkin.wifi?.verified && <span className="ml-2 text-green-600 text-xs">✅</span>}
+                        </div>
+                        <div className="text-xs bg-gray-50 p-2 rounded space-y-1 border">
+                          {checkin.wifi?.publicIP && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Public IP:</span>
+                              <span className="font-mono font-medium text-blue-600">{checkin.wifi.publicIP}</span>
+                            </div>
+                          )}
+                          {checkin.wifi?.localIP && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Local IP:</span>
+                              <span className="font-mono">{checkin.wifi.localIP}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-start">
+                          <MapPin size={14} className="mr-2 mt-0.5" />
+                          <span className="flex-1">{checkin.location?.address}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )} */}
+
+          {/* Camera modal */}
+          {showCamera && (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex justify-between items-center">
+                  <h2 className="text-xl font-bold">
+                    <Camera className="inline mr-2" size={24} /> Chụp ảnh khuôn mặt
+                  </h2>
+                  <button onClick={cancelCamera} className="hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition">
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  {!capturedPhoto ? (
+                    <div className="space-y-4">
+                      <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video">
+                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 border-4 border-blue-500 border-opacity-50 rounded-lg pointer-events-none">
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-80 border-2 border-white border-opacity-50 rounded-full"></div>
+                        </div>
+                      </div>
+
+                      <div className="text-center text-gray-600 text-sm">📸 Đặt khuôn mặt vào khung tròn và nhấn nút chụp</div>
+
+                      <button onClick={capturePhoto} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition flex items-center justify-center">
+                        <Camera className="mr-2" size={20} /> Chụp ảnh
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="relative bg-gray-100 rounded-lg overflow-hidden">
+                        <img src={capturedPhoto} alt="Captured" className="w-full h-auto" />
+                      </div>
+
+                      <div className="text-center text-gray-600 text-sm">✅ Ảnh đã được chụp. Vui lòng kiểm tra và xác nhận.</div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <button onClick={retakePhoto} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition">Chụp lại</button>
+                        <button onClick={confirmCheckin} disabled={loading} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed">
+                          {loading ? 'Đang lưu...' : 'Xác nhận'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Thank you message */}
+          {thankYouMessage && (
+            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full shadow-lg text-lg font-semibold animate-fadeIn">
+              💙 Kama cảm ơn bạn đã cống hiến 💙
+            </div>
+          )}
+
+          {/* Hidden canvas for capture */}
+          <canvas ref={canvasRef} style={{ display: 'none' }} />
+        </div>
+      </div>
+    </div>
+  );
+}
