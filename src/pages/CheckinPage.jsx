@@ -65,14 +65,13 @@ export default function EmployeeCheckin() {
     detectWifiAndIP();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load employeeId from localStorage on first load
+  // Load employeeId and employeeName from localStorage on first load
   useEffect(() => {
     try {
-      const storedId = localStorage.getItem('employeeId');
+      const storedId = localStorage.getItem('employeeSessionId');
+      const storedName = localStorage.getItem('employeeSessionName');
       if (storedId) {
-        const id = storedId.toUpperCase();
-        const emp = employeesMap[id];
-        setEmployee({ id, name: emp?.fullName || '' });
+        setEmployee({ id: storedId.toUpperCase(), name: storedName || '' });
       }
     } catch { /* ignore */ }
     setLoadedFromStorage(true);
@@ -86,7 +85,7 @@ export default function EmployeeCheckin() {
     if (emp && emp.fullName && emp.fullName !== employee.name) {
       setEmployee(prev => ({ ...prev, name: emp.fullName }));
     }
-    try { localStorage.setItem('employeeId', employee.id); } catch { /* ignore */ }
+    // Removed localStorage.setItem('employeeId', employee.id) as it's now handled by login page
   }, [employeesMap, employee.id, loadedFromStorage]);
 
   // Geolocation
@@ -606,8 +605,8 @@ return date.toLocaleString('en-US');
                   const newId = e.target.value.trim().toUpperCase();
                   const emp = employeesMap[newId];
                   setEmployee(prev => ({ ...prev, id: newId, name: emp?.fullName || prev.name }));
-                  try { if (newId) localStorage.setItem('employeeId', newId); } catch { /* ignore */ }
                 }}
+                disabled={!!employee.id}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter employee ID"
               />

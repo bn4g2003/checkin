@@ -6,6 +6,7 @@ import { ToastProvider } from './components/ui/ToastProvider.jsx';
 
 // Lazy loaded pages (to be created in ./pages & ./pages/admin)
 const CheckinPage = lazy(() => import('./pages/CheckinPage.jsx'));
+const EmployeeLoginPage = lazy(() => import('./pages/EmployeeLoginPage.jsx')); // New
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage.jsx'));
 const DashboardPage = lazy(() => import('./pages/admin/DashboardPage.jsx'));
 const EmployeesPage = lazy(() => import('./pages/admin/EmployeesPage.jsx'));
@@ -19,65 +20,95 @@ function ProtectedRoute({ children }) {
   return isLoggedIn ? children : <Navigate to="/admin" replace />;
 }
 
+// New Employee Protected Route
+function EmployeeProtectedRoute({ children }) {
+  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('employeeSessionId');
+  return isLoggedIn ? children : <Navigate to="/employee-login" replace />;
+}
+
+function EmployeeLogout() {
+  React.useEffect(() => {
+    localStorage.removeItem('employeeSessionId');
+    localStorage.removeItem('employeeSessionName');
+  }, []);
+  return <Navigate to="/employee-login" replace />;
+}
+
 export default function AppRouter() {
   return (
     <ToastProvider>
       <BrowserRouter>
         <Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
           <Routes>
-          <Route path="/" element={<CheckinPage />} />
-          <Route path="/ot-registration" element={<OTRegistrationPage />} />
-          <Route path="/admin" element={<AdminLoginPage />} />
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <DashboardPage />
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/employees"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <EmployeesPage />
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/wifi-checkins"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <WifiCheckinsPage />
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/ot-approval"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <OTApprovalPage />
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/salary"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <SalaryPage />
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
+            <Route path="/employee-login" element={<EmployeeLoginPage />} />
+            <Route path="/employee-logout" element={<EmployeeLogout />} />
+            <Route
+              path="/"
+              element={
+                <EmployeeProtectedRoute>
+                  <CheckinPage />
+                </EmployeeProtectedRoute>
+              }
+            />
+            <Route
+              path="/ot-registration"
+              element={
+                <EmployeeProtectedRoute>
+                  <OTRegistrationPage />
+                </EmployeeProtectedRoute>
+              }
+            />
+            <Route path="/admin" element={<AdminLoginPage />} />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute>
+                  <AdminLayout>
+                    <DashboardPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/employees"
+              element={
+                <ProtectedRoute>
+                  <AdminLayout>
+                    <EmployeesPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/wifi-checkins"
+              element={
+                <ProtectedRoute>
+                  <AdminLayout>
+                    <WifiCheckinsPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/ot-approval"
+              element={
+                <ProtectedRoute>
+                  <AdminLayout>
+                    <OTApprovalPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/salary"
+              element={
+                <ProtectedRoute>
+                  <AdminLayout>
+                    <SalaryPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </Suspense>
       </BrowserRouter>
