@@ -12,11 +12,15 @@ import {
   History,
   AlertCircle,
   Camera,
-  X
+  X,
+  DollarSign, // Added for check-in popup
+  Award // Added for check-out popup
 } from 'lucide-react';
+import { useToast } from '../components/ui/useToast.js'; // Added for toast notifications
 // import { put } from '@vercel/blob'; // Temporarily disabled
 
 export default function EmployeeCheckin() {
+  const { addToast } = useToast(); // Initialize useToast
   const [employee, setEmployee] = useState({ name: '', id: '' });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [location, setLocation] = useState({ lat: null, lng: null, address: '' });
@@ -28,7 +32,6 @@ export default function EmployeeCheckin() {
     verified: false,
     connectionType: 'unknown'
   });
-  const [thankYouMessage, setThankYouMessage] = useState(false);
   const [_checkins, _setCheckins] = useState([]);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [loading, setLoading] = useState(false);
@@ -424,82 +427,109 @@ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
       return;
     }
 
-    setLoading(true);
-    setStatus({ type: 'info', message: '⏳ Saving...' });
-    setThankYouMessage(true);
-    setTimeout(() => setThankYouMessage(false), 5000); // Ẩn sau 5 giây
-
-
-    try {
-      const timestamp = new Date().toISOString();
-      const checkinData = {
-        employeeId: employee.id,
-        employeeName: employee.name,
-        type: checkInType,
-        timestamp,
-        photoBase64: capturedPhoto, // tạm lưu base64 để fallback nếu cần
-        location: {
-          lat: location.lat,
-          lng: location.lng,
-          address: location.address
-        },
-        wifi: {
-          ssid: wifiInfo.ssid,
-          verified: wifiInfo.verified,
-          publicIP: wifiInfo.ip,
-          localIP: wifiInfo.localIP,
-          connectionType: wifiInfo.connectionType
+          setLoading(true);
+        setStatus({ type: 'info', message: '⏳ Saving...' });
+    
+        try {
+          const timestamp = new Date().toISOString();
+          const checkinData = {
+            employeeId: employee.id,
+            employeeName: employee.name,
+            type: checkInType,
+            timestamp,
+            photoBase64: capturedPhoto, // tạm lưu base64 để fallback nếu cần
+            location: {
+              lat: location.lat,
+              lng: location.lng,
+              address: location.address
+            },
+            wifi: {
+              ssid: wifiInfo.ssid,
+              verified: wifiInfo.verified,
+              publicIP: wifiInfo.ip,
+              localIP: wifiInfo.localIP,
+              connectionType: wifiInfo.connectionType
+            }
+          };
+    
+          // Destructure db object to use correct Firebase API  
+          const { database, ref, push } = db;
+          const checkinsRef = ref(database, 'checkins');
+          
+          console.log('🔥 About to save checkin data:', checkinData);
+          console.log('🔥 Database ref:', checkinsRef);
+          
+          // push và lấy ref mới (key)
+          const newRef = await push(checkinsRef, checkinData);
+          const newKey = newRef.key || null;
+          
+          console.log('🔥 Firebase push result:', newRef);
+          console.log('🔥 Generated key:', newKey);
+          
+          // Verify the data was actually saved
+          setTimeout(async () => {
+            try {
+              const { get } = db;
+              const savedRef = ref(database, `checkins/${newKey}`);
+              const snapshot = await get(savedRef);
+              if (snapshot.exists()) {
+                console.log('✅ Data verified in Firebase:', snapshot.val());
+              } else {
+                console.error('❌ Data NOT found in Firebase after save!');
+              }
+            } catch (verifyError) {
+              console.error('❌ Error verifying save:', verifyError);
+            }
+          }, 1000);
+    
+          // keep modal showing success UX, but clear capturedPhoto so next time fresh
+          setShowCamera(false);
+          setCapturedPhoto(null);
+          setCheckInType(null);
+    
+          // Display toast based on check-in type
+          if (checkInType === 'in') {
+            addToast({
+              type: 'success',
+              message: (
+                <div className="flex items-center">
+                  <DollarSign className="mr-2" size={20} />
+                  <div>
+                    <div className="font-bold">Check-in Successful!</div>
+                    <div>Wish you a productive and energetic working day, No sale, No Money</div>
+                  </div>
+                </div>
+              ),
+              duration: 5000
+            });
+          } else if (checkInType === 'out') {
+            addToast({
+              type: 'success',
+              message: (
+                <div className="flex items-center">
+                  <Award className="mr-2" size={20} />
+                  <div>
+                    <div className="font-bold">Check-out Successful!</div>
+                    <div>Congratulations on having a productive day at work, keep trying to receive lots of $$$$ at the end of the month</div>
+                  </div>
+                </div>
+              ),
+              duration: 5000
+            });
+          }
+    
+          setStatus({ type: 'success', message: '✅ Operation completed successfully!' });
+          setTimeout(() => setStatus({ type: '', message: '' }), 4000);
+    
+          // Upload to Vercel Blob in background and update record with photoURL
+          uploadToVercelBlobInBackground(capturedPhoto, employee.id, Date.now(), newKey);
+        } catch (error) {
+          console.error('Save error:', error);
+          setStatus({ type: 'error', message: '❌ Error saving data: ' + (error?.message || error) });
+        } finally {
+          setLoading(false);
         }
       };
-
-      // Destructure db object to use correct Firebase API  
-      const { database, ref, push } = db;
-      const checkinsRef = ref(database, 'checkins');
-      
-      console.log('🔥 About to save checkin data:', checkinData);
-      console.log('🔥 Database ref:', checkinsRef);
-      
-      // push và lấy ref mới (key)
-      const newRef = await push(checkinsRef, checkinData);
-      const newKey = newRef.key || null;
-      
-      console.log('🔥 Firebase push result:', newRef);
-      console.log('🔥 Generated key:', newKey);
-      
-      // Verify the data was actually saved
-      setTimeout(async () => {
-        try {
-          const { get } = db;
-          const savedRef = ref(database, `checkins/${newKey}`);
-          const snapshot = await get(savedRef);
-          if (snapshot.exists()) {
-            console.log('✅ Data verified in Firebase:', snapshot.val());
-          } else {
-            console.error('❌ Data NOT found in Firebase after save!');
-          }
-        } catch (verifyError) {
-          console.error('❌ Error verifying save:', verifyError);
-        }
-      }, 1000);
-
-      // keep modal showing success UX, but clear capturedPhoto so next time fresh
-      setShowCamera(false);
-      setCapturedPhoto(null);
-      setCheckInType(null);
-
-      setStatus({ type: 'success', message: '✅ You have checked in successfully!' });
-      setTimeout(() => setStatus({ type: '', message: '' }), 4000);
-
-      // Upload to Vercel Blob in background and update record with photoURL
-      uploadToVercelBlobInBackground(capturedPhoto, employee.id, Date.now(), newKey);
-    } catch (error) {
-      console.error('Save error:', error);
-      setStatus({ type: 'error', message: '❌ Error saving data: ' + (error?.message || error) });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Helper to convert dataURL to Blob (temporarily unused)
   const _dataURLtoBlob = (dataurl) => {
     const arr = dataurl.split(',');
@@ -841,12 +871,6 @@ return date.toLocaleString('en-US');
               </div>
 </div>
           )}
-          {thankYouMessage && (
-            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full shadow-lg text-lg font-semibold animate-fadeIn">
-              💙 Kama thanks you for your dedication 💙
-            </div>
-          )}
-
           {/* Hidden canvas for capture */}
           <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
