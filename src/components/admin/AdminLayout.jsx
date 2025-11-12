@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Wifi, Users, DollarSign } from 'lucide-react';
+import { LogOut, LayoutDashboard, Wifi, Users, DollarSign, Clock } from 'lucide-react';
 
 const linkBase = 'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200';
 const linkActive = 'bg-red-100 text-red-700 shadow-inner';
@@ -56,6 +56,14 @@ export default function AdminLayout({ children }) {
           >
             <Users size={20} />
             <span>Employees</span>
+          </NavLink>
+
+          <NavLink
+            to="/admin/ot-approval"
+            className={({ isActive }) => `${linkBase} ${isActive ? linkActive : linkInactive}`}
+          >
+            <Clock size={20} />
+            <span>OT Management</span>
           </NavLink>
         </nav>
 

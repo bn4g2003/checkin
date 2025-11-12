@@ -7,6 +7,7 @@ import { ToastProvider } from './components/ui/ToastProvider.jsx';
 // Lazy loaded pages (to be created in ./pages & ./pages/admin)
 const CheckinPage = lazy(() => import('./pages/CheckinPage.jsx'));
 const EmployeeLoginPage = lazy(() => import('./pages/EmployeeLoginPage.jsx')); // New
+const EmployeeProfilePage = lazy(() => import('./pages/EmployeeProfilePage.jsx')); // New
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage.jsx'));
 const DashboardPage = lazy(() => import('./pages/admin/DashboardPage.jsx'));
 const EmployeesPage = lazy(() => import('./pages/admin/EmployeesPage.jsx'));
@@ -47,6 +48,14 @@ export default function AppRouter() {
               element={
                 <EmployeeProtectedRoute>
                   <CheckinPage />
+                </EmployeeProtectedRoute>
+              }
+            />
+            <Route
+              path="/employee-profile"
+              element={
+                <EmployeeProtectedRoute>
+                  <EmployeeProfilePage />
                 </EmployeeProtectedRoute>
               }
             />

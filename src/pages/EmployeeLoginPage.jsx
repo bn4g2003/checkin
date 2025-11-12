@@ -8,7 +8,7 @@ export default function EmployeeLoginPage() {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const [employeeId, setEmployeeId] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -21,8 +21,11 @@ export default function EmployeeLoginPage() {
 
       if (snapshot.exists()) {
         const employeeData = snapshot.val();
-        if (employeeData.fullName.toLowerCase() === fullName.toLowerCase()) {
-          if (employeeData.active) {
+        
+        // Kiểm tra password
+        const storedPassword = employeeData.password || '123456'; // Mặc định là 123456 nếu chưa có
+        if (storedPassword === password) {
+          if (employeeData.active !== false) {
             localStorage.setItem('employeeSessionId', employeeId.toUpperCase());
             localStorage.setItem('employeeSessionName', employeeData.fullName);
             addToast({ type: 'success', message: `Welcome, ${employeeData.fullName}!` });
@@ -31,7 +34,7 @@ export default function EmployeeLoginPage() {
             addToast({ type: 'error', message: 'Your account is inactive. Please contact HR.' });
           }
         } else {
-          addToast({ type: 'error', message: 'Invalid Full Name.' });
+          addToast({ type: 'error', message: 'Invalid password.' });
         }
       } else {
         addToast({ type: 'error', message: 'Employee ID not found.' });
@@ -60,13 +63,13 @@ export default function EmployeeLoginPage() {
           />
         </div>
         <div>
-          <label className="text-sm font-medium text-gray-700 flex items-center mb-1"><Lock size={16} className="mr-1"/>Full Name</label>
+          <label className="text-sm font-medium text-gray-700 flex items-center mb-1"><Lock size={16} className="mr-1"/>Password</label>
           <input
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-            placeholder="e.g., Nguyễn Văn An"
+            placeholder="Enter your password"
             required
           />
         </div>

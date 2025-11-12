@@ -17,6 +17,7 @@ import {
   Award // Added for check-out popup
 } from 'lucide-react';
 import { useToast } from '../components/ui/useToast.js'; // Added for toast notifications
+import EmployeeNavbar from '../components/employee/EmployeeNavbar.jsx';
 // import { put } from '@vercel/blob'; // Temporarily disabled
 
 export default function EmployeeCheckin() {
@@ -594,13 +595,15 @@ return date.toLocaleString('en-US');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 w-full">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-            <h1 className="text-3xl font-bold text-center">Employee Check-in System</h1>
-          </div>
+    <>
+      <EmployeeNavbar />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 w-full">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+              <h1 className="text-3xl font-bold text-center">Employee Check-in System</h1>
+            </div>
 
           {/* Time */}
           <div className="bg-indigo-50 p-6 text-center border-b">
@@ -876,5 +879,6 @@ return date.toLocaleString('en-US');
         </div>
       </div>
     </div>
+    </>
   );
 }

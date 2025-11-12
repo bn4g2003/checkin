@@ -96,6 +96,7 @@ const LoadingSkeleton = () => (
 const SalaryPage = () => {
   const [employees, setEmployees] = useState([]);
   const [workRecords, setWorkRecords] = useState({});
+  const [otRequests, setOtRequests] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [loading, setLoading] = useState(true);
 
@@ -106,12 +107,17 @@ const SalaryPage = () => {
         const { database, ref, get } = await getDb();
         const employeesSnapshot = await get(ref(database, 'employees'));
         const workRecordsSnapshot = await get(ref(database, 'workRecords'));
+        const otRequestsSnapshot = await get(ref(database, 'otRequests'));
 
         if (employeesSnapshot.exists()) {
           setEmployees(Object.entries(employeesSnapshot.val()).map(([id, data]) => ({ id, ...data })));
         }
         if (workRecordsSnapshot.exists()) {
           setWorkRecords(workRecordsSnapshot.val());
+        }
+        if (otRequestsSnapshot.exists()) {
+          const otData = Object.entries(otRequestsSnapshot.val()).map(([id, data]) => ({ id, ...data }));
+          setOtRequests(otData);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -129,7 +135,7 @@ const SalaryPage = () => {
   const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
 
   const salaryData = useMemo(() => {
-    if (!employees.length || !Object.keys(workRecords).length) return [];
+    if (!employees.length) return [];
 
     const [year, month] = selectedMonth.split('-').map(Number);
     const daysInMonth = getDaysInMonth(year, month);
@@ -140,22 +146,31 @@ const SalaryPage = () => {
       const hourlyRate = dailyRate / 8;
 
       let workDays = 0;
-      let otHours = 0;
       let sundayWorkDays = 0;
 
+      // Calculate work days from workRecords
       for (const date in workRecords) {
         if (date.startsWith(selectedMonth)) {
           const record = workRecords[date]?.[employee.id];
           if (record) {
             workDays++;
             if (new Date(date).getDay() === 0) sundayWorkDays++;
-            otHours += Number(record.otHours || 0);
           }
         }
       }
 
+      // Calculate OT hours from approved OT requests
+      let otHours = 0;
+      const approvedOTs = otRequests.filter(ot => 
+        ot.employeeId === employee.id && 
+        ot.status === 'approved' && 
+        ot.date.startsWith(selectedMonth)
+      );
+      
+      otHours = approvedOTs.reduce((sum, ot) => sum + (parseFloat(ot.hours) || 0), 0);
+
       const baseSalaryCalculated = dailyRate * workDays;
-      const otSalary = otHours * hourlyRate * 1.25;
+      const otSalary = otHours * hourlyRate * 1.5; // OT rate 1.5x
       const sundaySalary = sundayWorkDays * dailyRate * 1.5;
       const totalSalary = baseSalaryCalculated + otSalary + sundaySalary;
 
@@ -170,7 +185,7 @@ const SalaryPage = () => {
         totalSalary,
       };
     });
-  }, [employees, workRecords, selectedMonth]);
+  }, [employees, workRecords, otRequests, selectedMonth]);
 
   const summaryStats = useMemo(() => {
     const totalEmployees = salaryData.length;

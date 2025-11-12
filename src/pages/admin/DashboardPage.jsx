@@ -27,6 +27,13 @@ export default function DashboardPage() {
     team: '',
     position: ''
   });
+  const [expandedSeniority, setExpandedSeniority] = useState({
+    under1Month: false,
+    month1to3: false,
+    month3to6: false,
+    month6to12: false,
+    over12Months: false
+  });
 
   // Fetch data from Firebase
   useEffect(() => {
@@ -586,33 +593,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Overtime Ranking */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Top OT (Overtime Hours)</h3>
-            <div className="space-y-3">
-              {performanceRankings.overtimeRanking.slice(0, 5).map((emp, index) => (
-                <div key={emp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-red-100 text-red-800 flex items-center justify-center text-sm font-bold">
-                      {index + 1}
-                    </div>
-                    <div className="ml-3">
-                      <p className="font-medium text-gray-900">{emp.fullName}</p>
-                      <p className="text-sm text-gray-600">{emp.position} - {emp.department}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-red-600">{emp.totalOvertime.toFixed(1)}h</p>
-                    <p className="text-xs text-gray-500">overtime</p>
-                  </div>
-                </div>
-              ))}
-              {performanceRankings.overtimeRanking.length === 0 && (
-                <p className="text-gray-500 text-center py-4">No data</p>
-              )}
-            </div>
-          </div>
-
           {/* All On Time Performance */}
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">All Punctual Employees</h3>
@@ -630,6 +610,89 @@ export default function DashboardPage() {
                 <p className="text-gray-500 text-center py-4">No data</p>
               )}
             </div>
+          </div>
+
+          {/* All Hardworking Employees */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">All Hardworking Employees</h3>
+            <div className="max-h-64 overflow-y-auto">
+              {performanceRankings.mostHardworking.map((emp, index) => (
+                <div key={emp.id} className="flex items-center justify-between p-2 border-b border-gray-100">
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-600 w-6">{index + 1}.</span>
+                    <p className="font-medium text-gray-900 ml-2">{emp.fullName}</p>
+                  </div>
+                  <p className="font-bold text-blue-600">{emp.totalHours.toFixed(1)}h</p>
+                </div>
+              ))}
+              {performanceRankings.mostHardworking.length === 0 && (
+                <p className="text-gray-500 text-center py-4">No data</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Top OT (Overtime Hours) - Full Width */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-red-800 mb-4">Top OT (Overtime Hours)</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rank
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Employee Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Position
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Department
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Branch
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total Overtime
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {performanceRankings.overtimeRanking.map((emp, index) => (
+                  <tr key={emp.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-8 h-8 rounded-full bg-red-100 text-red-800 flex items-center justify-center text-sm font-bold">
+                        {index + 1}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{emp.fullName || emp.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">{emp.position}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">{emp.department}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">{emp.branch}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-bold text-red-600">{emp.totalOvertime.toFixed(1)}h</div>
+                    </td>
+                  </tr>
+                ))}
+                {performanceRankings.overtimeRanking.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                      No data available
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -672,69 +735,169 @@ export default function DashboardPage() {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Seniority Statistics</h3>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-red-600">🆕</span>
+              {/* Under 1 month */}
+              <div>
+                <div 
+                  className="flex items-center justify-between p-3 bg-red-50 rounded-lg cursor-pointer hover:bg-red-100 transition-colors"
+                  onClick={() => setExpandedSeniority({...expandedSeniority, under1Month: !expandedSeniority.under1Month})}
+                >
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-medium text-red-600">🆕</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">Under 1 month</p>
+                      <p className="text-xs text-gray-500">New employees</p>
+                    </div>
                   </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">Under 1 month</p>
-                    <p className="text-xs text-gray-500">New employees</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-red-600">{birthdayAndSeniority.seniorityGroups.under1Month.length}</span>
+                    <svg className={`w-5 h-5 text-gray-500 transition-transform ${expandedSeniority.under1Month ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-red-600">{birthdayAndSeniority.seniorityGroups.under1Month.length}</span>
+                {expandedSeniority.under1Month && birthdayAndSeniority.seniorityGroups.under1Month.length > 0 && (
+                  <div className="mt-2 ml-4 space-y-1">
+                    {birthdayAndSeniority.seniorityGroups.under1Month.map((emp, idx) => (
+                      <div key={idx} className="text-sm text-gray-700 py-1 px-3 bg-gray-50 rounded">
+                        {emp.fullName || emp.name} - {emp.position}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-yellow-600">📈</span>
+              {/* 1-3 months */}
+              <div>
+                <div 
+                  className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors"
+                  onClick={() => setExpandedSeniority({...expandedSeniority, month1to3: !expandedSeniority.month1to3})}
+                >
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-medium text-yellow-600">📈</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">1-3 months</p>
+                      <p className="text-xs text-gray-500">Adapting</p>
+                    </div>
                   </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">1-3 months</p>
-                    <p className="text-xs text-gray-500">Adapting</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-yellow-600">{birthdayAndSeniority.seniorityGroups.month1to3.length}</span>
+                    <svg className={`w-5 h-5 text-gray-500 transition-transform ${expandedSeniority.month1to3 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-yellow-600">{birthdayAndSeniority.seniorityGroups.month1to3.length}</span>
+                {expandedSeniority.month1to3 && birthdayAndSeniority.seniorityGroups.month1to3.length > 0 && (
+                  <div className="mt-2 ml-4 space-y-1">
+                    {birthdayAndSeniority.seniorityGroups.month1to3.map((emp, idx) => (
+                      <div key={idx} className="text-sm text-gray-700 py-1 px-3 bg-gray-50 rounded">
+                        {emp.fullName || emp.name} - {emp.position}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-blue-600">⭐</span>
+              {/* 3-6 months */}
+              <div>
+                <div 
+                  className="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors"
+                  onClick={() => setExpandedSeniority({...expandedSeniority, month3to6: !expandedSeniority.month3to6})}
+                >
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-medium text-blue-600">⭐</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">3-6 months</p>
+                      <p className="text-xs text-gray-500">Stable</p>
+                    </div>
                   </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">3-6 months</p>
-                    <p className="text-xs text-gray-500">Stable</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-blue-600">{birthdayAndSeniority.seniorityGroups.month3to6.length}</span>
+                    <svg className={`w-5 h-5 text-gray-500 transition-transform ${expandedSeniority.month3to6 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-blue-600">{birthdayAndSeniority.seniorityGroups.month3to6.length}</span>
+                {expandedSeniority.month3to6 && birthdayAndSeniority.seniorityGroups.month3to6.length > 0 && (
+                  <div className="mt-2 ml-4 space-y-1">
+                    {birthdayAndSeniority.seniorityGroups.month3to6.map((emp, idx) => (
+                      <div key={idx} className="text-sm text-gray-700 py-1 px-3 bg-gray-50 rounded">
+                        {emp.fullName || emp.name} - {emp.position}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-green-600">💎</span>
+              {/* 6-12 months */}
+              <div>
+                <div 
+                  className="flex items-center justify-between p-3 bg-green-50 rounded-lg cursor-pointer hover:bg-green-100 transition-colors"
+                  onClick={() => setExpandedSeniority({...expandedSeniority, month6to12: !expandedSeniority.month6to12})}
+                >
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-medium text-green-600">💎</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">6-12 months</p>
+                      <p className="text-xs text-gray-500">Core employees</p>
+                    </div>
                   </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">6-12 months</p>
-                    <p className="text-xs text-gray-500">Core employees</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-green-600">{birthdayAndSeniority.seniorityGroups.month6to12.length}</span>
+                    <svg className={`w-5 h-5 text-gray-500 transition-transform ${expandedSeniority.month6to12 ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-green-600">{birthdayAndSeniority.seniorityGroups.month6to12.length}</span>
+                {expandedSeniority.month6to12 && birthdayAndSeniority.seniorityGroups.month6to12.length > 0 && (
+                  <div className="mt-2 ml-4 space-y-1">
+                    {birthdayAndSeniority.seniorityGroups.month6to12.map((emp, idx) => (
+                      <div key={idx} className="text-sm text-gray-700 py-1 px-3 bg-gray-50 rounded">
+                        {emp.fullName || emp.name} - {emp.position}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-purple-600">👑</span>
+              {/* Over 1 year */}
+              <div>
+                <div 
+                  className="flex items-center justify-between p-3 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors"
+                  onClick={() => setExpandedSeniority({...expandedSeniority, over12Months: !expandedSeniority.over12Months})}
+                >
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-medium text-purple-600">👑</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">Over 1 year</p>
+                      <p className="text-xs text-gray-500">Key employees</p>
+                    </div>
                   </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">Over 1 year</p>
-                    <p className="text-xs text-gray-500">Key employees</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-purple-600">{birthdayAndSeniority.seniorityGroups.over12Months.length}</span>
+                    <svg className={`w-5 h-5 text-gray-500 transition-transform ${expandedSeniority.over12Months ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-purple-600">{birthdayAndSeniority.seniorityGroups.over12Months.length}</span>
+                {expandedSeniority.over12Months && birthdayAndSeniority.seniorityGroups.over12Months.length > 0 && (
+                  <div className="mt-2 ml-4 space-y-1">
+                    {birthdayAndSeniority.seniorityGroups.over12Months.map((emp, idx) => (
+                      <div key={idx} className="text-sm text-gray-700 py-1 px-3 bg-gray-50 rounded">
+                        {emp.fullName || emp.name} - {emp.position}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
