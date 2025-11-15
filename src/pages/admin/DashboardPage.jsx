@@ -521,12 +521,13 @@ export default function DashboardPage() {
           <h3 className="text-lg font-semibold text-red-800 mb-4">Top 5 Most Hardworking Employees</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData.topHardworkingData} layout="horizontal">
+              <BarChart data={chartData.topHardworkingData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={150} />
+                <XAxis dataKey="name" />
+                <YAxis />
                 <Tooltip />
-                <Bar dataKey="hours" fill="#B91C1C" />
+                <Legend />
+                <Bar dataKey="hours" fill="#B91C1C" name="Total Hours" />
               </BarChart>
             </ResponsiveContainer>
           </div>
