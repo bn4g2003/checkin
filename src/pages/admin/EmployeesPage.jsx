@@ -12,7 +12,7 @@ const QUICK_OPTIONS = {
 };
 
 // ==== MODAL CẬP NHẬT ====
-const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving, existingIds }) => {
+const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving, existingIds, uniqueDepartments, uniqueBranches, uniquePositions, uniqueTeams }) => {
   const [form, setForm] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [currencyType, setCurrencyType] = useState('VND');
@@ -55,28 +55,50 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving, existingIds 
     onSave(form, isEditing);
   };
 
-  const renderField = (label, name, type = 'text', placeholder = '', required = false, options = null) => {
-    if (options) {
+  const renderField = (label, name, type = 'text', placeholder = '', required = false, options = null, allowCustom = false) => {
+    // Nếu có options và cho phép custom (dùng datalist)
+    if (options && allowCustom) {
       return (
         <div>
           <label className="block text-sm font-medium text-gray-600 mb-1">{label}{required && ' *'}</label>
-          <div className="relative">
-            <input
-              type="text"
-              list={`${name}-list`}
-              placeholder={placeholder}
-              value={form[name] || ''}
-              onChange={(e) => setForm({ ...form, [name]: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm"
-            />
-            <datalist id={`${name}-list`}>
-              {options.map(opt => <option key={opt} value={opt} />)}
-            </datalist>
-          </div>
+          <input
+            type="text"
+            list={`${name}-list`}
+            placeholder={placeholder}
+            value={form[name] || ''}
+            onChange={(e) => setForm({ ...form, [name]: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm"
+            required={required}
+          />
+          <datalist id={`${name}-list`}>
+            {options.map(opt => <option key={opt} value={opt} />)}
+          </datalist>
+          {options.length > 0 && (
+            <p className="text-xs text-gray-500 mt-1">Select from list or enter new</p>
+          )}
         </div>
       );
     }
     
+    // Nếu có options nhưng không cho phép custom (dropdown cố định)
+    if (options) {
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-1">{label}{required && ' *'}</label>
+          <select
+            value={form[name] || ''}
+            onChange={(e) => setForm({ ...form, [name]: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm"
+            required={required}
+          >
+            <option value="">-- Select {label} --</option>
+            {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+        </div>
+      );
+    }
+    
+    // Input thông thường
     return (
       <div>
         <label className="block text-sm font-medium text-gray-600 mb-1">{label}{required && ' *'}</label>
@@ -102,7 +124,7 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving, existingIds 
         <form onSubmit={handleSave} className="flex-grow overflow-y-auto p-6 space-y-6">
           {/* Thông tin cơ bản */}
           <div className="border-b pb-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Thông tin cơ bản</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Employee ID *</label>
@@ -113,7 +135,7 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving, existingIds 
                   onChange={(e) => setForm({ ...form, employeeId: e.target.value.toUpperCase() })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm"
                 />
-                {isEditing && <p className="text-xs text-amber-600 mt-1">⚠️ Thay đổi ID sẽ tạo nhân viên mới</p>}
+                {isEditing && <p className="text-xs text-amber-600 mt-1">⚠️ Changing ID will create a new employee</p>}
               </div>
               {renderField('Full Name', 'fullName', 'text', '', true)}
               {renderField('Date of Birth', 'birthday', 'date')}
@@ -122,7 +144,7 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving, existingIds 
 
           {/* Liên hệ */}
           <div className="border-b pb-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Thông tin liên hệ</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {renderField('Email', 'email', 'email', 'email@company.com')}
               {renderField('Phone Number', 'phone', 'tel')}
@@ -132,18 +154,18 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving, existingIds 
 
           {/* Phòng ban & Vị trí */}
           <div className="border-b pb-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Phòng ban & Vị trí</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Department & Position</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderField('Department', 'department', 'text', 'Chọn hoặc nhập mới', false, QUICK_OPTIONS.departments)}
-              {renderField('Branch', 'branch', 'text', 'Chọn hoặc nhập mới', false, QUICK_OPTIONS.branches)}
-              {renderField('Position', 'position', 'text', 'Chọn hoặc nhập mới', false, QUICK_OPTIONS.positions)}
-              {renderField('Team', 'team', 'text', 'Chọn hoặc nhập mới', false, QUICK_OPTIONS.teams)}
+              {renderField('Department', 'department', 'text', 'Select or enter new', false, uniqueDepartments.length > 0 ? uniqueDepartments : QUICK_OPTIONS.departments, true)}
+              {renderField('Branch', 'branch', 'text', 'Select or enter new', false, uniqueBranches.length > 0 ? uniqueBranches : QUICK_OPTIONS.branches, true)}
+              {renderField('Position', 'position', 'text', 'Select or enter new', false, uniquePositions.length > 0 ? uniquePositions : QUICK_OPTIONS.positions, true)}
+              {renderField('Team', 'team', 'text', 'Select or enter new', false, uniqueTeams.length > 0 ? uniqueTeams : QUICK_OPTIONS.teams, true)}
             </div>
           </div>
 
           {/* Ngày làm việc */}
           <div className="border-b pb-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Thời gian làm việc</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Employment Period</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {renderField('Start Date', 'startDate', 'date')}
               {renderField('End Date', 'endDate', 'date')}
@@ -152,10 +174,10 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving, existingIds 
 
           {/* Lương */}
           <div className="border-b pb-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Thông tin lương</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Salary Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Loại tiền tệ</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Currency Type</label>
                 <select
                   value={currencyType}
                   onChange={(e) => {
@@ -195,16 +217,16 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving, existingIds 
           <div className="border-b pb-4">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
               <Lock size={16} />
-              Mật khẩu đăng nhập
+              Login Password
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Password {!isEditing && '(Tùy chọn)'}
+                  Password {!isEditing && '(Optional)'}
                 </label>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder={isEditing ? 'Để trống nếu không đổi' : 'Nhập mật khẩu'}
+                  placeholder={isEditing ? 'Leave blank to keep current' : 'Enter password'}
                   value={form.password || ''}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm"
@@ -216,14 +238,14 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employee, saving, existingIds 
                   onClick={() => setShowPassword(!showPassword)}
                   className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
                 >
-                  {showPassword ? 'Ẩn' : 'Hiện'} mật khẩu
+                  {showPassword ? 'Hide' : 'Show'} password
                 </button>
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2">
               {isEditing 
-                ? 'Chỉ nhập mật khẩu mới nếu muốn thay đổi. Để trống để giữ nguyên mật khẩu cũ.'
-                : 'Mật khẩu sẽ được lưu trực tiếp vào database. Mặc định là "123456" nếu để trống.'}
+                ? 'Only enter a new password if you want to change it. Leave blank to keep the current password.'
+                : 'Password will be saved directly to database. Default is "123456" if left blank.'}
             </p>
           </div>
 
@@ -319,6 +341,16 @@ export default function EmployeesPage() {
   
   const uniqueBranches = useMemo(() => 
     [...new Set(employees.map(e => e.branch).filter(Boolean))].sort(),
+    [employees]
+  );
+  
+  const uniquePositions = useMemo(() => 
+    [...new Set(employees.map(e => e.position).filter(Boolean))].sort(),
+    [employees]
+  );
+  
+  const uniqueTeams = useMemo(() => 
+    [...new Set(employees.map(e => e.team).filter(Boolean))].sort(),
     [employees]
   );
 
@@ -457,26 +489,26 @@ export default function EmployeesPage() {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Phòng ban</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
               <select
                 value={filterDept}
                 onChange={(e) => setFilterDept(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
               >
-                <option value="">Tất cả phòng ban</option>
+                <option value="">All Departments</option>
                 {uniqueDepartments.map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Chi nhánh</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
               <select
                 value={filterBranch}
                 onChange={(e) => setFilterBranch(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
               >
-                <option value="">Tất cả chi nhánh</option>
+                <option value="">All Branches</option>
                 {uniqueBranches.map(branch => (
                   <option key={branch} value={branch}>{branch}</option>
                 ))}
@@ -490,7 +522,7 @@ export default function EmployeesPage() {
                 }}
                 className="w-full px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
               >
-                Xóa bộ lọc
+                Clear Filters
               </button>
             </div>
           </div>
@@ -560,6 +592,10 @@ export default function EmployeesPage() {
         employee={editingEmployee}
         saving={saving}
         existingIds={existingIds}
+        uniqueDepartments={uniqueDepartments}
+        uniqueBranches={uniqueBranches}
+        uniquePositions={uniquePositions}
+        uniqueTeams={uniqueTeams}
       />
     </div>
   );

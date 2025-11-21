@@ -142,9 +142,9 @@ export default function OTApprovalPage() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Chờ duyệt', icon: AlertCircle },
-      approved: { bg: 'bg-green-100', text: 'text-green-700', label: 'Đã duyệt', icon: CheckCircle },
-      rejected: { bg: 'bg-red-100', text: 'text-red-700', label: 'Từ chối', icon: XCircle }
+      pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pending', icon: AlertCircle },
+      approved: { bg: 'bg-green-100', text: 'text-green-700', label: 'Approved', icon: CheckCircle },
+      rejected: { bg: 'bg-red-100', text: 'text-red-700', label: 'Rejected', icon: XCircle }
     };
 
     const badge = badges[status] || badges.pending;
@@ -163,7 +163,7 @@ export default function OTApprovalPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Đang tải...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -173,8 +173,8 @@ export default function OTApprovalPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-600">
-        <h1 className="text-3xl font-bold text-red-800 mb-2">Quản lý OT</h1>
-        <p className="text-gray-600">Duyệt và quản lý đăng ký làm thêm giờ</p>
+        <h1 className="text-3xl font-bold text-red-800 mb-2">OT Management</h1>
+        <p className="text-gray-600">Approve and manage overtime requests</p>
       </div>
 
       {/* Statistics */}
@@ -182,7 +182,7 @@ export default function OTApprovalPage() {
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Tổng đăng ký</p>
+              <p className="text-sm text-gray-600">Total Requests</p>
               <p className="text-2xl font-bold text-gray-800">{statistics.total}</p>
             </div>
             <FileText size={32} className="text-gray-300" />
@@ -192,7 +192,7 @@ export default function OTApprovalPage() {
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Chờ duyệt</p>
+              <p className="text-sm text-gray-600">Pending</p>
               <p className="text-2xl font-bold text-yellow-600">{statistics.pending}</p>
             </div>
             <AlertCircle size={32} className="text-yellow-300" />
@@ -202,7 +202,7 @@ export default function OTApprovalPage() {
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Đã duyệt</p>
+              <p className="text-sm text-gray-600">Approved</p>
               <p className="text-2xl font-bold text-green-600">{statistics.approved}</p>
             </div>
             <CheckCircle size={32} className="text-green-300" />
@@ -212,7 +212,7 @@ export default function OTApprovalPage() {
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Từ chối</p>
+              <p className="text-sm text-gray-600">Rejected</p>
               <p className="text-2xl font-bold text-red-600">{statistics.rejected}</p>
             </div>
             <XCircle size={32} className="text-red-300" />
@@ -222,7 +222,7 @@ export default function OTApprovalPage() {
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Tổng giờ OT</p>
+              <p className="text-sm text-gray-600">Total OT Hours</p>
               <p className="text-2xl font-bold text-indigo-600">{statistics.totalHours.toFixed(1)}h</p>
             </div>
             <Clock size={32} className="text-indigo-300" />
@@ -236,30 +236,30 @@ export default function OTApprovalPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Filter size={16} className="inline mr-1" />
-              Trạng thái
+              Status
             </label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
             >
-              <option value="all">Tất cả</option>
-              <option value="pending">Chờ duyệt</option>
-              <option value="approved">Đã duyệt</option>
-              <option value="rejected">Từ chối</option>
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Search size={16} className="inline mr-1" />
-              Tìm kiếm
+              Search
             </label>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm theo tên, ID, lý do..."
+              placeholder="Search by name, ID, reason..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
             />
           </div>
@@ -273,25 +273,25 @@ export default function OTApprovalPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nhân viên
+                  Employee
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ngày OT
+                  OT Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thời gian
+                  Time
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Số giờ
+                  Hours
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Lý do
+                  Reason
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trạng thái
+                  Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Hành động
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -299,7 +299,7 @@ export default function OTApprovalPage() {
               {filteredRequests.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
-                    Không có đăng ký OT nào
+                    No OT requests found
                   </td>
                 </tr>
               ) : (
@@ -344,7 +344,7 @@ export default function OTApprovalPage() {
                           }}
                           className="text-indigo-600 hover:text-indigo-900 font-medium"
                         >
-                          Xử lý
+                          Process
                         </button>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -363,54 +363,54 @@ export default function OTApprovalPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Xử lý đăng ký OT</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Process OT Request</h2>
 
               <div className="space-y-4 mb-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Nhân viên</p>
+                    <p className="text-sm text-gray-600">Employee</p>
                     <p className="font-medium">{selectedRequest.employeeName}</p>
                     <p className="text-sm text-gray-500">{selectedRequest.employeeId}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Ngày OT</p>
+                    <p className="text-sm text-gray-600">OT Date</p>
                     <p className="font-medium">{new Date(selectedRequest.date).toLocaleDateString('vi-VN')}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Thời gian</p>
+                    <p className="text-sm text-gray-600">Time</p>
                     <p className="font-medium">{selectedRequest.startTime} - {selectedRequest.endTime}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Số giờ OT</p>
+                    <p className="text-sm text-gray-600">OT Hours</p>
                     <p className="font-medium text-indigo-600 text-lg">{selectedRequest.hours}h</p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600">Lý do</p>
+                  <p className="text-sm text-gray-600">Reason</p>
                   <p className="font-medium">{selectedRequest.reason}</p>
                 </div>
 
                 {selectedRequest.description && (
                   <div>
-                    <p className="text-sm text-gray-600">Mô tả chi tiết</p>
+                    <p className="text-sm text-gray-600">Detailed Description</p>
                     <p className="text-gray-700">{selectedRequest.description}</p>
                   </div>
                 )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ghi chú của quản lý
+                    Manager's Note
                   </label>
                   <textarea
                     value={approverNote}
                     onChange={(e) => setApproverNote(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
                     rows="3"
-                    placeholder="Nhập ghi chú (bắt buộc nếu từ chối)..."
+                    placeholder="Enter note (required if rejecting)..."
                   />
                 </div>
               </div>
@@ -421,14 +421,14 @@ export default function OTApprovalPage() {
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
                 >
                   <CheckCircle size={18} />
-                  Duyệt
+                  Approve
                 </button>
                 <button
                   onClick={() => handleReject(selectedRequest.id)}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
                 >
                   <XCircle size={18} />
-                  Từ chối
+                  Reject
                 </button>
                 <button
                   onClick={() => {
@@ -437,7 +437,7 @@ export default function OTApprovalPage() {
                   }}
                   className="px-4 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
                 >
-                  Đóng
+                  Close
                 </button>
               </div>
             </div>

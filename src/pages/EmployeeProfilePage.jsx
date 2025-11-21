@@ -230,7 +230,7 @@ export default function EmployeeProfilePage() {
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition"
                 >
                   <Edit size={18} />
-                  Chỉnh sửa
+                  Edit
                 </button>
               ) : (
                 <div className="flex gap-2">
@@ -239,14 +239,14 @@ export default function EmployeeProfilePage() {
                     className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
                   >
                     <Save size={18} />
-                    Lưu
+                    Save
                   </button>
                   <button
                     onClick={handleCancelEdit}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
                   >
                     <X size={18} />
-                    Hủy
+                    Cancel
                   </button>
                 </div>
               )}
@@ -258,22 +258,22 @@ export default function EmployeeProfilePage() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
               <Briefcase size={20} className="text-indigo-600" />
-              Thông tin công việc
+              Work Information
             </h2>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Building size={16} className="text-gray-500" />
-                <span className="text-gray-600">Phòng ban:</span>
+                <span className="text-gray-600">Department:</span>
                 <span className="font-medium">{employee.department || '-'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Award size={16} className="text-gray-500" />
-                <span className="text-gray-600">Vị trí:</span>
+                <span className="text-gray-600">Position:</span>
                 <span className="font-medium">{employee.position || '-'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin size={16} className="text-gray-500" />
-                <span className="text-gray-600">Chi nhánh:</span>
+                <span className="text-gray-600">Branch:</span>
                 <span className="font-medium">{employee.branch || '-'}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -287,12 +287,12 @@ export default function EmployeeProfilePage() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
               <User size={20} className="text-indigo-600" />
-              Thông tin cá nhân
+              Personal Information
             </h2>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Calendar size={16} className="text-gray-500" />
-                <span className="text-gray-600 min-w-[120px]">Ngày sinh:</span>
+                <span className="text-gray-600 min-w-[120px]">Date of Birth:</span>
                 {isEditing ? (
                   <input
                     type="date"
@@ -321,7 +321,7 @@ export default function EmployeeProfilePage() {
               </div>
               <div className="flex items-center gap-2">
                 <Phone size={16} className="text-gray-500" />
-                <span className="text-gray-600 min-w-[120px]">Điện thoại:</span>
+                <span className="text-gray-600 min-w-[120px]">Phone:</span>
                 {isEditing ? (
                   <input
                     type="tel"
@@ -336,7 +336,7 @@ export default function EmployeeProfilePage() {
               </div>
               <div className="flex items-center gap-2">
                 <Calendar size={16} className="text-gray-500" />
-                <span className="text-gray-600 min-w-[120px]">Ngày vào làm:</span>
+                <span className="text-gray-600 min-w-[120px]">Start Date:</span>
                 <span className="font-medium">{formatDate(employee.startDate)}</span>
               </div>
             </div>
@@ -347,11 +347,11 @@ export default function EmployeeProfilePage() {
         <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg shadow-md p-6 text-white">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
             <DollarSign size={24} />
-            Thông tin lương
+            Salary Information
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white/20 rounded-lg p-4">
-              <p className="text-sm opacity-90">Lương cơ bản</p>
+              <p className="text-sm opacity-90">Base Salary</p>
               <p className="text-2xl font-bold">
                 {statistics.baseSalary > 0 
                   ? formatCurrency(statistics.baseSalary, 'VND')
@@ -359,11 +359,11 @@ export default function EmployeeProfilePage() {
               </p>
             </div>
             <div className="bg-white/20 rounded-lg p-4">
-              <p className="text-sm opacity-90">Tỷ lệ lương</p>
+              <p className="text-sm opacity-90">Salary Percentage</p>
               <p className="text-2xl font-bold">{statistics.salaryPercentage}%</p>
             </div>
             <div className="bg-white/20 rounded-lg p-4">
-              <p className="text-sm opacity-90">Lương thực nhận</p>
+              <p className="text-sm opacity-90">Actual Salary</p>
               <p className="text-2xl font-bold">
                 {statistics.actualSalary > 0
                   ? formatCurrency(statistics.actualSalary, 'VND')
@@ -378,7 +378,7 @@ export default function EmployeeProfilePage() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Tổng ngày làm</p>
+                <p className="text-sm text-gray-600">Total Days</p>
                 <p className="text-3xl font-bold text-indigo-600">{statistics.totalDays}</p>
               </div>
               <Calendar size={40} className="text-indigo-200" />
@@ -388,7 +388,7 @@ export default function EmployeeProfilePage() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Tổng giờ làm</p>
+                <p className="text-sm text-gray-600">Total Hours</p>
                 <p className="text-3xl font-bold text-blue-600">{statistics.totalHours.toFixed(1)}h</p>
               </div>
               <Clock size={40} className="text-blue-200" />
@@ -398,7 +398,7 @@ export default function EmployeeProfilePage() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Tỷ lệ đúng giờ</p>
+                <p className="text-sm text-gray-600">On-Time Rate</p>
                 <p className="text-3xl font-bold text-green-600">{statistics.onTimeRate.toFixed(1)}%</p>
               </div>
               <TrendingUp size={40} className="text-green-200" />
@@ -408,7 +408,7 @@ export default function EmployeeProfilePage() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Tổng OT</p>
+                <p className="text-sm text-gray-600">Total OT</p>
                 <p className="text-3xl font-bold text-orange-600">{statistics.totalOvertime.toFixed(1)}h</p>
               </div>
               <Award size={40} className="text-orange-200" />
@@ -418,14 +418,14 @@ export default function EmployeeProfilePage() {
 
         {/* Recent Check-ins */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Lịch sử check-in gần đây</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Check-in History</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Thời gian</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Loại</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Địa điểm</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">WiFi</th>
                 </tr>
               </thead>
@@ -455,7 +455,7 @@ export default function EmployeeProfilePage() {
                 {checkins.length === 0 && (
                   <tr>
                     <td colSpan="4" className="px-4 py-8 text-center text-gray-500">
-                      Chưa có lịch sử check-in
+                      No check-in history yet
                     </td>
                   </tr>
                 )}

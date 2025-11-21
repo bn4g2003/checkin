@@ -127,9 +127,9 @@ export default function OTRegistrationPage() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Chờ duyệt' },
-      approved: { bg: 'bg-green-100', text: 'text-green-700', label: 'Đã duyệt' },
-      rejected: { bg: 'bg-red-100', text: 'text-red-700', label: 'Từ chối' }
+      pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pending' },
+      approved: { bg: 'bg-green-100', text: 'text-green-700', label: 'Approved' },
+      rejected: { bg: 'bg-red-100', text: 'text-red-700', label: 'Rejected' }
     };
     
     const badge = badges[status] || badges.pending;
@@ -155,9 +155,9 @@ export default function OTRegistrationPage() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
               <Clock className="text-indigo-600" />
-              Đăng ký làm thêm giờ (OT)
+              Overtime (OT) Registration
             </h1>
-            <p className="text-gray-600 mt-2">Nhân viên: {employeeName} ({employeeId})</p>
+            <p className="text-gray-600 mt-2">Employee: {employeeName} ({employeeId})</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -165,14 +165,14 @@ export default function OTRegistrationPage() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <Send className="text-indigo-600" />
-                Đăng ký OT mới
+                New OT Registration
               </h2>
               
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <Calendar size={16} className="inline mr-1" />
-                    Ngày làm OT *
+                    OT Date *
                   </label>
                   <input
                     type="date"
@@ -187,7 +187,7 @@ export default function OTRegistrationPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <Clock size={16} className="inline mr-1" />
-                      Giờ bắt đầu *
+                      Start Time *
                     </label>
                     <input
                       type="time"
@@ -201,7 +201,7 @@ export default function OTRegistrationPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <Clock size={16} className="inline mr-1" />
-                      Giờ kết thúc *
+                      End Time *
                     </label>
                     <input
                       type="time"
@@ -216,7 +216,7 @@ export default function OTRegistrationPage() {
                 {form.startTime && form.endTime && (
                   <div className="bg-indigo-50 p-3 rounded-lg">
                     <p className="text-sm text-indigo-700">
-                      Tổng số giờ OT: <span className="font-bold text-lg">{calculateHours()}h</span>
+                      Total OT Hours: <span className="font-bold text-lg">{calculateHours()}h</span>
                     </p>
                   </div>
                 )}
@@ -224,7 +224,7 @@ export default function OTRegistrationPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <FileText size={16} className="inline mr-1" />
-                    Lý do *
+                    Reason *
                   </label>
                   <select
                     value={form.reason}
@@ -232,25 +232,25 @@ export default function OTRegistrationPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                     required
                   >
-                    <option value="">-- Chọn lý do --</option>
-                    <option value="Dự án khẩn cấp">Dự án khẩn cấp</option>
-                    <option value="Deadline gấp">Deadline gấp</option>
-                    <option value="Hỗ trợ team">Hỗ trợ team</option>
-                    <option value="Công việc tồn đọng">Công việc tồn đọng</option>
-                    <option value="Khác">Khác</option>
+                    <option value="">-- Select Reason --</option>
+                    <option value="Urgent Project">Urgent Project</option>
+                    <option value="Tight Deadline">Tight Deadline</option>
+                    <option value="Team Support">Team Support</option>
+                    <option value="Backlog Work">Backlog Work</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Mô tả chi tiết
+                    Detailed Description
                   </label>
                   <textarea
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                     rows="3"
-                    placeholder="Mô tả công việc cần làm OT..."
+                    placeholder="Describe the work that requires OT..."
                   />
                 </div>
 
@@ -260,7 +260,7 @@ export default function OTRegistrationPage() {
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send size={18} />
-                  {loading ? 'Đang gửi...' : 'Gửi đăng ký'}
+                  {loading ? 'Submitting...' : 'Submit Registration'}
                 </button>
               </form>
             </div>
@@ -269,14 +269,14 @@ export default function OTRegistrationPage() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <FileText className="text-indigo-600" />
-                Lịch sử đăng ký OT
+                OT Registration History
               </h2>
 
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
                 {otRequests.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <AlertCircle size={48} className="mx-auto mb-2 text-gray-300" />
-                    <p>Chưa có đăng ký OT nào</p>
+                    <p>No OT registrations yet</p>
                   </div>
                 ) : (
                   otRequests.map((request) => (
@@ -294,23 +294,23 @@ export default function OTRegistrationPage() {
                       <div className="space-y-1 text-sm text-gray-600">
                         <p>
                           <Clock size={14} className="inline mr-1" />
-                          Thời gian: {request.startTime} - {request.endTime} ({request.hours}h)
+                          Time: {request.startTime} - {request.endTime} ({request.hours}h)
                         </p>
                         <p>
                           <FileText size={14} className="inline mr-1" />
-                          Lý do: {request.reason}
+                          Reason: {request.reason}
                         </p>
                         {request.description && (
                           <p className="text-gray-500 italic">"{request.description}"</p>
                         )}
                         {request.approverNote && (
                           <div className="mt-2 p-2 bg-gray-50 rounded">
-                            <p className="text-xs text-gray-500">Ghi chú từ quản lý:</p>
+                            <p className="text-xs text-gray-500">Manager's Note:</p>
                             <p className="text-sm">{request.approverNote}</p>
                           </div>
                         )}
                         <p className="text-xs text-gray-400 mt-2">
-                          Đăng ký lúc: {new Date(request.createdAt).toLocaleString('vi-VN')}
+                          Registered at: {new Date(request.createdAt).toLocaleString('vi-VN')}
                         </p>
                       </div>
                     </div>
