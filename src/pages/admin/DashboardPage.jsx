@@ -16,6 +16,140 @@ import {
   ResponsiveContainer
 } from 'recharts';
 
+// Map các tên chi nhánh về vùng miền chuẩn của Việt Nam
+const VIETNAM_REGION_MAP = {
+  // Miền Bắc
+  'Hà Nội': 'Northern Vietnam',
+  'Ha Noi': 'Northern Vietnam',
+  'Hanoi': 'Northern Vietnam',
+  'HN': 'Northern Vietnam',
+  'Hải Phòng': 'Northern Vietnam',
+  'Hai Phong': 'Northern Vietnam',
+  'Haiphong': 'Northern Vietnam',
+  'HP': 'Northern Vietnam',
+  'Quảng Ninh': 'Northern Vietnam',
+  'Quang Ninh': 'Northern Vietnam',
+  'Hải Dương': 'Northern Vietnam',
+  'Hai Duong': 'Northern Vietnam',
+  'Bắc Ninh': 'Northern Vietnam',
+  'Bac Ninh': 'Northern Vietnam',
+  'Thái Nguyên': 'Northern Vietnam',
+  'Thai Nguyen': 'Northern Vietnam',
+  'Vĩnh Phúc': 'Northern Vietnam',
+  'Vinh Phuc': 'Northern Vietnam',
+  'Nam Định': 'Northern Vietnam',
+  'Nam Dinh': 'Northern Vietnam',
+  'Ninh Bình': 'Northern Vietnam',
+  'Ninh Binh': 'Northern Vietnam',
+  
+  // Miền Trung
+  'Đà Nẵng': 'Central Vietnam',
+  'Da Nang': 'Central Vietnam',
+  'Danang': 'Central Vietnam',
+  'DN': 'Central Vietnam',
+  'Huế': 'Central Vietnam',
+  'Hue': 'Central Vietnam',
+  'Thừa Thiên Huế': 'Central Vietnam',
+  'Thua Thien Hue': 'Central Vietnam',
+  'Quảng Nam': 'Central Vietnam',
+  'Quang Nam': 'Central Vietnam',
+  'Quảng Ngãi': 'Central Vietnam',
+  'Quang Ngai': 'Central Vietnam',
+  'Bình Định': 'Central Vietnam',
+  'Binh Dinh': 'Central Vietnam',
+  'Phú Yên': 'Central Vietnam',
+  'Phu Yen': 'Central Vietnam',
+  'Khánh Hòa': 'Central Vietnam',
+  'Khanh Hoa': 'Central Vietnam',
+  'Nha Trang': 'Central Vietnam',
+  'Nghệ An': 'Central Vietnam',
+  'Nghe An': 'Central Vietnam',
+  'Hà Tĩnh': 'Central Vietnam',
+  'Ha Tinh': 'Central Vietnam',
+  'Quảng Bình': 'Central Vietnam',
+  'Quang Binh': 'Central Vietnam',
+  'Quảng Trị': 'Central Vietnam',
+  'Quang Tri': 'Central Vietnam',
+  
+  // Miền Nam
+  'Hồ Chí Minh': 'Southern Vietnam',
+  'Ho Chi Minh': 'Southern Vietnam',
+  'HCMC': 'Southern Vietnam',
+  'HCM': 'Southern Vietnam',
+  'Sài Gòn': 'Southern Vietnam',
+  'Saigon': 'Southern Vietnam',
+  'SG': 'Southern Vietnam',
+  'Cần Thơ': 'Southern Vietnam',
+  'Can Tho': 'Southern Vietnam',
+  'CT': 'Southern Vietnam',
+  'Đồng Nai': 'Southern Vietnam',
+  'Dong Nai': 'Southern Vietnam',
+  'Bình Dương': 'Southern Vietnam',
+  'Binh Duong': 'Southern Vietnam',
+  'Vũng Tàu': 'Southern Vietnam',
+  'Vung Tau': 'Southern Vietnam',
+  'Bà Rịa - Vũng Tàu': 'Southern Vietnam',
+  'Ba Ria - Vung Tau': 'Southern Vietnam',
+  'Long An': 'Southern Vietnam',
+  'Tiền Giang': 'Southern Vietnam',
+  'Tien Giang': 'Southern Vietnam',
+  'Bến Tre': 'Southern Vietnam',
+  'Ben Tre': 'Southern Vietnam',
+  'Vĩnh Long': 'Southern Vietnam',
+  'Vinh Long': 'Southern Vietnam',
+  'An Giang': 'Southern Vietnam',
+  'Kiên Giang': 'Southern Vietnam',
+  'Kien Giang': 'Southern Vietnam',
+  'Sóc Trăng': 'Southern Vietnam',
+  'Soc Trang': 'Southern Vietnam',
+  'Bạc Liêu': 'Southern Vietnam',
+  'Bac Lieu': 'Southern Vietnam',
+  'Cà Mau': 'Southern Vietnam',
+  'Ca Mau': 'Southern Vietnam',
+  'Đắk Lắk': 'Southern Vietnam',
+  'Dak Lak': 'Southern Vietnam',
+  'Lâm Đồng': 'Southern Vietnam',
+  'Lam Dong': 'Southern Vietnam',
+  'Đà Lạt': 'Southern Vietnam',
+  'Da Lat': 'Southern Vietnam',
+  'Dalat': 'Southern Vietnam'
+};
+
+// Các từ khóa chung cho Việt Nam (không chỉ rõ vùng miền)
+const VIETNAM_GENERAL_KEYWORDS = [
+  'việt nam', 'vietnam', 'viet nam', 'vn', 'việtnam', 'vietnamese'
+];
+
+// Hàm chuẩn hóa tên chi nhánh
+const normalizeRegion = (branch) => {
+  if (!branch) return 'Other';
+  
+  const branchTrimmed = branch.trim();
+  const branchLower = branchTrimmed.toLowerCase();
+  
+  // Kiểm tra trong map (chính xác)
+  if (VIETNAM_REGION_MAP[branchTrimmed]) {
+    return VIETNAM_REGION_MAP[branchTrimmed];
+  }
+  
+  // Kiểm tra trong map (không phân biệt hoa thường)
+  for (const [key, value] of Object.entries(VIETNAM_REGION_MAP)) {
+    if (key.toLowerCase() === branchLower) {
+      return value;
+    }
+  }
+  
+  // Kiểm tra các từ khóa chung "Việt Nam" (không chỉ rõ vùng)
+  for (const keyword of VIETNAM_GENERAL_KEYWORDS) {
+    if (branchLower === keyword || branchLower.includes(keyword)) {
+      return 'Vietnam (Unspecified)';
+    }
+  }
+  
+  // Nếu không tìm thấy, trả về "Other"
+  return 'Other';
+};
+
 export default function DashboardPage() {
   const [employees, setEmployees] = useState([]);
   const [workRecords, setWorkRecords] = useState({});
@@ -90,7 +224,15 @@ export default function DashboardPage() {
     const totalEmployees = filteredEmployees.length;
     const activeEmployees = filteredEmployees.filter(emp => emp.active !== false).length;
     const inactiveEmployees = totalEmployees - activeEmployees;
-    const vietnamEmployees = filteredEmployees.filter(emp => emp.branch === 'Hà Nội' || emp.branch === 'Hồ Chí Minh').length;
+    
+    // Đếm nhân viên Việt Nam (tất cả các vùng miền + không xác định vùng)
+    const vietnamEmployees = filteredEmployees.filter(emp => {
+      const region = normalizeRegion(emp.branch);
+      return region === 'Northern Vietnam' || 
+             region === 'Central Vietnam' || 
+             region === 'Southern Vietnam' || 
+             region === 'Vietnam (Unspecified)';
+    }).length;
     const otherBranches = totalEmployees - vietnamEmployees;
 
     // Calculate today's stats
@@ -248,12 +390,11 @@ export default function DashboardPage() {
       value
     }));
 
-    // Branch distribution data for pie chart
+    // Branch distribution data for pie chart - chuẩn hóa theo vùng miền
     const branchData = {};
     filteredEmployees.forEach(emp => {
-      if (emp.branch) {
-        branchData[emp.branch] = (branchData[emp.branch] || 0) + 1;
-      }
+      const region = normalizeRegion(emp.branch);
+      branchData[region] = (branchData[region] || 0) + 1;
     });
     const branchChartData = Object.entries(branchData).map(([name, value]) => ({
       name,

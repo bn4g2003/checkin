@@ -17,9 +17,10 @@ export default function WifiCheckinsPage() {
   const [wifiForm, setWifiForm] = useState({ name: '', publicIP: '', localIP: '' });
   const [editingWifi, setEditingWifi] = useState(null);
   const [status, setStatus] = useState(null);
-  const [filters, setFilters] = useState({ date: '', type: '', employee: '' });
+  const [filters, setFilters] = useState({ date: '', type: '', employee: '', team: '' });
   const [debouncedEmployee, setDebouncedEmployee] = useState('');
   const [page, setPage] = useState(1);
+  const [employees, setEmployees] = useState([]);
   const [workSettings, setWorkSettings] = useState({
     standardCheckin: '09:00',
     standardCheckout: '18:00',
@@ -213,6 +214,12 @@ export default function WifiCheckinsPage() {
           setCheckins(list);
           setLoadingCheckins(false);
         });
+        // load employees for team filter
+        onValue(ref(database, 'employees'), snap => {
+          const data = snap.val();
+          const list = data ? Object.keys(data).map(id => ({ id, ...data[id] })) : [];
+          setEmployees(list);
+        });
         // load work settings
         onValue(ref(database, 'workSettings/global'), snap => {
           const val = snap.val();
@@ -304,6 +311,21 @@ export default function WifiCheckinsPage() {
     }
   };
 
+  // Get unique teams from employees
+  const uniqueTeams = useMemo(() => {
+    const teams = employees.map(emp => emp.team).filter(Boolean);
+    return [...new Set(teams)].sort();
+  }, [employees]);
+
+  // Create employee map for quick lookup
+  const employeeMap = useMemo(() => {
+    const map = {};
+    employees.forEach(emp => {
+      map[emp.id] = emp;
+    });
+    return map;
+  }, [employees]);
+
   // history filters + pagination
   const filteredHistory = useMemo(() => {
     let list = checkins;
@@ -322,8 +344,15 @@ export default function WifiCheckinsPage() {
       const q = debouncedEmployee.toLowerCase();
       list = list.filter(c => c.employeeId?.toLowerCase().includes(q) || c.employeeName?.toLowerCase().includes(q));
     }
+    // Filter by team
+    if (filters.team) {
+      list = list.filter(c => {
+        const emp = employeeMap[c.employeeId];
+        return emp && emp.team === filters.team;
+      });
+    }
     return list;
-  }, [checkins, filters.date, filters.type, debouncedEmployee]);
+  }, [checkins, filters.date, filters.type, debouncedEmployee, filters.team, employeeMap]);
   const totalPages = Math.max(1, Math.ceil(filteredHistory.length / historyPageSize));
   const pageHistory = filteredHistory.slice((page - 1) * historyPageSize, page * historyPageSize);
   console.log('DEBUG pagination:', { 
@@ -516,7 +545,7 @@ export default function WifiCheckinsPage() {
           {activeTab === 'history' && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">Check-in History</h2>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-xs bg-gray-50 p-3 rounded border">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-2 text-xs bg-gray-50 p-3 rounded border">
                 <div>
                   <label className="block mb-1">Date</label>
                   <input type="date" value={filters.date} onChange={e => { setFilters({ ...filters, date: e.target.value }); setPage(1); }} className="w-full px-2 py-1 border rounded" />
@@ -529,13 +558,22 @@ export default function WifiCheckinsPage() {
                     <option value="out">Check-out</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block mb-1">Team</label>
+                  <select value={filters.team} onChange={e => { setFilters({ ...filters, team: e.target.value }); setPage(1); }} className="w-full px-2 py-1 border rounded">
+                    <option value="">All Teams</option>
+                    {uniqueTeams.map(team => (
+                      <option key={team} value={team}>{team}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="md:col-span-2">
                   <label className="block mb-1">Employee</label>
                   <input value={filters.employee} onChange={e => { setFilters({ ...filters, employee: e.target.value }); setPage(1); }} className="w-full px-2 py-1 border rounded" placeholder="Search by name or ID" />
                 </div>
-                <div className="flex items-end">
-                  <button onClick={() => { setFilters({ date: '', type: '', employee: '' }); setPage(1); }} className="px-3 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200">Clear</button>
-                  <button onClick={exportHistoryXLSX} className="ml-2 px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Export XLSX</button>
+                <div className="flex items-end gap-1">
+                  <button onClick={() => { setFilters({ date: '', type: '', employee: '', team: '' }); setPage(1); }} className="px-3 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200">Clear</button>
+                  <button onClick={exportHistoryXLSX} className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Export</button>
                 </div>
               </div>
               {loadingCheckins ? (
@@ -552,6 +590,7 @@ export default function WifiCheckinsPage() {
                         <tr className="bg-gray-100 text-left">
                           <th className="p-2">Time</th>
                           <th className="p-2">Employee</th>
+                          <th className="p-2">Team</th>
                           <th className="p-2">Type</th>
                           <th className="p-2">WiFi</th>
                           <th className="p-2">Public IP</th>
@@ -560,32 +599,40 @@ export default function WifiCheckinsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {pageHistory.map(c => (
-                          <tr key={c.id} className="border-t hover:bg-gray-50">
-                            <td className="p-2 whitespace-nowrap">{c.timestamp ? new Date(c.timestamp).toLocaleString('en-US') : '—'}</td>
-                            <td className="p-2">{c.employeeName} <span className="text-gray-400">({c.employeeId})</span></td>
-                            <td className="p-2 font-medium">{c.type === 'in' ? 'IN' : 'OUT'}</td>
-                            <td className="p-2">{c.wifi?.ssid}</td>
-                            <td className="p-2 font-mono">{c.wifi?.publicIP || '—'}</td>
-                            <td className="p-2 font-mono">{c.wifi?.localIP || '—'}</td>
-                            <td className="p-2">{c.photoBase64 ? <div className='cursor-pointer' onClick={() => setModalPhoto({ src: c.photoBase64, employeeName: c.employeeName, timestamp: c.timestamp })}><img src={c.photoBase64} alt="Check-in Photo" width={50} height={50} /></div> : <span className="text-gray-400">—</span>}</td>
-                          </tr>
-                        ))}
+                        {pageHistory.map(c => {
+                          const emp = employeeMap[c.employeeId];
+                          return (
+                            <tr key={c.id} className="border-t hover:bg-gray-50">
+                              <td className="p-2 whitespace-nowrap">{c.timestamp ? new Date(c.timestamp).toLocaleString('en-US') : '—'}</td>
+                              <td className="p-2">{c.employeeName} <span className="text-gray-400">({c.employeeId})</span></td>
+                              <td className="p-2 text-gray-600">{emp?.team || '—'}</td>
+                              <td className="p-2 font-medium">{c.type === 'in' ? 'IN' : 'OUT'}</td>
+                              <td className="p-2">{c.wifi?.ssid}</td>
+                              <td className="p-2 font-mono">{c.wifi?.publicIP || '—'}</td>
+                              <td className="p-2 font-mono">{c.wifi?.localIP || '—'}</td>
+                              <td className="p-2">{c.photoBase64 ? <div className='cursor-pointer' onClick={() => setModalPhoto({ src: c.photoBase64, employeeName: c.employeeName, timestamp: c.timestamp })}><img src={c.photoBase64} alt="Check-in Photo" width={50} height={50} /></div> : <span className="text-gray-400">—</span>}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
                   {/* Mobile cards */}
                   <div className="md:hidden space-y-3">
-                    {pageHistory.map(c => (
-                      <div key={c.id} className="border rounded-lg p-3 bg-gray-50">
-                        <div className="text-xs text-gray-500">{c.timestamp ? new Date(c.timestamp).toLocaleString('en-US') : '—'}</div>
-                        <div className="font-medium">{c.employeeName} <span className="text-gray-400">({c.employeeId})</span></div>
-                        <div className="text-xs">Type: <span className="font-medium">{c.type === 'in' ? 'IN' : 'OUT'}</span></div>
-                        <div className="text-xs">WiFi: {c.wifi?.ssid}</div>
-                        <div className="text-[11px] font-mono text-gray-600">Public: {c.wifi?.publicIP || '—'} | Local: {c.wifi?.localIP || '—'}</div>
-                        <div className="p-2">{c.photoBase64 ? <div className='cursor-pointer' onClick={() => setModalPhoto({ src: c.photoBase64, employeeName: c.employeeName, timestamp: c.timestamp })}><img src={c.photoBase64} alt="Check-in Photo" width={50} height={50} /></div> : <span className="text-gray-400">—</span>}</div>
-                      </div>
-                    ))}
+                    {pageHistory.map(c => {
+                      const emp = employeeMap[c.employeeId];
+                      return (
+                        <div key={c.id} className="border rounded-lg p-3 bg-gray-50">
+                          <div className="text-xs text-gray-500">{c.timestamp ? new Date(c.timestamp).toLocaleString('en-US') : '—'}</div>
+                          <div className="font-medium">{c.employeeName} <span className="text-gray-400">({c.employeeId})</span></div>
+                          <div className="text-xs">Team: <span className="text-gray-600">{emp?.team || '—'}</span></div>
+                          <div className="text-xs">Type: <span className="font-medium">{c.type === 'in' ? 'IN' : 'OUT'}</span></div>
+                          <div className="text-xs">WiFi: {c.wifi?.ssid}</div>
+                          <div className="text-[11px] font-mono text-gray-600">Public: {c.wifi?.publicIP || '—'} | Local: {c.wifi?.localIP || '—'}</div>
+                          <div className="p-2">{c.photoBase64 ? <div className='cursor-pointer' onClick={() => setModalPhoto({ src: c.photoBase64, employeeName: c.employeeName, timestamp: c.timestamp })}><img src={c.photoBase64} alt="Check-in Photo" width={50} height={50} /></div> : <span className="text-gray-400">—</span>}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="flex items-center justify-between mt-3 text-xs">
                     <span>Page {page} / {totalPages} (Total {filteredHistory.length})</span>
