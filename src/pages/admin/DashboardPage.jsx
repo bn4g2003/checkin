@@ -154,12 +154,21 @@ export default function DashboardPage() {
   const [employees, setEmployees] = useState([]);
   const [workRecords, setWorkRecords] = useState({});
   const [checkins, setCheckins] = useState([]);
+  const [salaryPayments, setSalaryPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     branch: '',
     department: '',
     team: '',
     position: ''
+  });
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    return date.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
   });
   const [expandedSeniority, setExpandedSeniority] = useState({
     under1Month: false,
@@ -198,6 +207,14 @@ export default function DashboardPage() {
           setCheckins(checkinList);
         });
 
+        // Fetch salary payments (mock data structure - adjust based on your actual database)
+        const salaryPaymentsRef = ref(database, 'salaryPayments');
+        onValue(salaryPaymentsRef, (snapshot) => {
+          const data = snapshot.val();
+          const paymentList = data ? Object.keys(data).map(id => ({ id, ...data[id] })) : [];
+          setSalaryPayments(paymentList);
+        });
+
         setLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -207,6 +224,14 @@ export default function DashboardPage() {
 
     fetchData();
   }, []);
+
+  // Get date range from date pickers
+  const getDateRange = useMemo(() => {
+    return { 
+      startDate: new Date(startDate), 
+      endDate: new Date(endDate) 
+    };
+  }, [startDate, endDate]);
 
   // Filter employees based on selected filters
   const filteredEmployees = useMemo(() => {
@@ -235,12 +260,20 @@ export default function DashboardPage() {
     }).length;
     const otherBranches = totalEmployees - vietnamEmployees;
 
-    // Calculate today's stats
-    const today = new Date().toISOString().split('T')[0];
-    const todayCheckins = checkins.filter(checkin => checkin.timestamp.startsWith(today));
-    const todayWorkRecords = workRecords[today] || {};
-    const employeesCheckedInToday = Object.keys(todayWorkRecords).length;
-    const lateEmployeesToday = Object.values(todayWorkRecords).filter(record => record.late).length;
+    // Calculate cash flow in time range
+    const { startDate, endDate } = getDateRange;
+    const filteredPayments = salaryPayments.filter(payment => {
+      const paymentDate = new Date(payment.date || payment.timestamp);
+      return paymentDate >= startDate && paymentDate <= endDate;
+    });
+    
+    const totalUSD = filteredPayments
+      .filter(p => p.currency === 'USD')
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    const totalVND = filteredPayments
+      .filter(p => p.currency === 'VND')
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
 
     return { 
       totalEmployees, 
@@ -248,21 +281,23 @@ export default function DashboardPage() {
       inactiveEmployees,
       vietnamEmployees, 
       otherBranches,
-      employeesCheckedInToday,
-      lateEmployeesToday,
-      todayCheckins: todayCheckins.length
+      totalUSD,
+      totalVND
     };
-  }, [filteredEmployees, checkins, workRecords]);
+  }, [filteredEmployees, salaryPayments, getDateRange]);
 
   // Performance rankings
   const performanceRankings = useMemo(() => {
-    // Calculate on-time performance based on workRecords
+    const { startDate, endDate } = getDateRange;
+    
+    // Calculate on-time performance based on workRecords within time range
     const onTimePerformance = filteredEmployees.map(emp => {
       const employeeRecords = [];
       
-      // Collect all work records for this employee
-      Object.values(workRecords).forEach(dayRecords => {
-        if (dayRecords[emp.id]) {
+      // Collect work records for this employee within time range
+      Object.entries(workRecords).forEach(([date, dayRecords]) => {
+        const recordDate = new Date(date);
+        if (recordDate >= startDate && recordDate <= endDate && dayRecords[emp.id]) {
           employeeRecords.push(dayRecords[emp.id]);
         }
       });
@@ -278,12 +313,13 @@ export default function DashboardPage() {
       };
     }).filter(emp => emp.totalRecords > 0).sort((a, b) => b.onTimeRate - a.onTimeRate);
 
-    // Calculate total hours worked
+    // Calculate total hours worked within time range
     const mostHardworking = filteredEmployees.map(emp => {
       const employeeRecords = [];
       
-      Object.values(workRecords).forEach(dayRecords => {
-        if (dayRecords[emp.id]) {
+      Object.entries(workRecords).forEach(([date, dayRecords]) => {
+        const recordDate = new Date(date);
+        if (recordDate >= startDate && recordDate <= endDate && dayRecords[emp.id]) {
           employeeRecords.push(dayRecords[emp.id]);
         }
       });
@@ -299,12 +335,13 @@ export default function DashboardPage() {
       };
     }).filter(emp => emp.totalHours > 0).sort((a, b) => b.totalHours - a.totalHours);
 
-    // Calculate overtime (hours beyond standard 8 hours)
+    // Calculate overtime within time range
     const overtimeRanking = filteredEmployees.map(emp => {
       const employeeRecords = [];
       
-      Object.values(workRecords).forEach(dayRecords => {
-        if (dayRecords[emp.id]) {
+      Object.entries(workRecords).forEach(([date, dayRecords]) => {
+        const recordDate = new Date(date);
+        if (recordDate >= startDate && recordDate <= endDate && dayRecords[emp.id]) {
           employeeRecords.push(dayRecords[emp.id]);
         }
       });
@@ -326,7 +363,7 @@ export default function DashboardPage() {
       mostHardworking: mostHardworking.slice(0, 10),
       overtimeRanking: overtimeRanking.slice(0, 10)
     };
-  }, [filteredEmployees, workRecords]);
+  }, [filteredEmployees, workRecords, getDateRange]);
 
   // Birthday and Seniority statistics
   const birthdayAndSeniority = useMemo(() => {
@@ -378,58 +415,96 @@ export default function DashboardPage() {
 
   // Chart data calculations
   const chartData = useMemo(() => {
-    // Department distribution data
-    const departmentData = {};
-    filteredEmployees.forEach(emp => {
-      if (emp.department) {
-        departmentData[emp.department] = (departmentData[emp.department] || 0) + 1;
+    const { startDate, endDate } = getDateRange;
+    
+    // Cash flow data for USD
+    const cashFlowUSD = {};
+    const cashFlowVND = {};
+    
+    salaryPayments.forEach(payment => {
+      const paymentDate = new Date(payment.date || payment.timestamp);
+      if (paymentDate >= startDate && paymentDate <= endDate) {
+        const dateStr = paymentDate.toISOString().split('T')[0];
+        
+        if (payment.currency === 'USD') {
+          cashFlowUSD[dateStr] = (cashFlowUSD[dateStr] || 0) + (payment.amount || 0);
+        } else if (payment.currency === 'VND') {
+          cashFlowVND[dateStr] = (cashFlowVND[dateStr] || 0) + (payment.amount || 0);
+        }
       }
     });
-    const departmentChartData = Object.entries(departmentData).map(([name, value]) => ({
-      name,
-      value
-    }));
-
-    // Branch distribution data for pie chart - chuẩn hóa theo vùng miền
-    const branchData = {};
-    filteredEmployees.forEach(emp => {
-      const region = normalizeRegion(emp.branch);
-      branchData[region] = (branchData[region] || 0) + 1;
-    });
-    const branchChartData = Object.entries(branchData).map(([name, value]) => ({
-      name,
-      value
-    }));
-
-    // Check-in trend data (last 7 days)
-    const checkinTrendData = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      const dayCheckins = checkins.filter(checkin => checkin.timestamp.startsWith(dateStr)).length;
-      const dayWorkRecords = Object.keys(workRecords[dateStr] || {}).length;
-      
-      checkinTrendData.push({
-        date: date.toLocaleDateString('vi-VN', { weekday: 'short', month: 'short', day: 'numeric' }),
-        checkins: dayCheckins,
-        employees: dayWorkRecords
-      });
+    
+    // Generate date array for the range
+    const dates = [];
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      dates.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
     }
+    
+    // Sample dates based on date range to avoid too many data points
+    const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+    let sampledDates = dates;
+    if (daysDiff > 365) {
+      sampledDates = dates.filter((_, index) => index % 30 === 0); // Every month
+    } else if (daysDiff > 90) {
+      sampledDates = dates.filter((_, index) => index % 7 === 0); // Every week
+    } else if (daysDiff > 30) {
+      sampledDates = dates.filter((_, index) => index % 3 === 0); // Every 3 days
+    }
+    
+    const cashFlowUSDData = sampledDates.map(date => {
+      const dateStr = date.toISOString().split('T')[0];
+      return {
+        date: date.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' }),
+        amount: cashFlowUSD[dateStr] || 0
+      };
+    });
+    
+    const cashFlowVNDData = sampledDates.map(date => {
+      const dateStr = date.toISOString().split('T')[0];
+      return {
+        date: date.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' }),
+        amount: cashFlowVND[dateStr] || 0
+      };
+    });
 
-    // Top hardworking employees data
-    const topHardworkingData = performanceRankings.mostHardworking.slice(0, 5).map(emp => ({
-      name: emp.fullName || emp.name,
-      hours: emp.totalHours
-    }));
+    // Attendance rate over time
+    const attendanceData = sampledDates.map(date => {
+      const dateStr = date.toISOString().split('T')[0];
+      const dayWorkRecords = workRecords[dateStr] || {};
+      const presentCount = Object.keys(dayWorkRecords).length;
+      const totalActive = filteredEmployees.filter(emp => emp.active !== false).length;
+      const attendanceRate = totalActive > 0 ? (presentCount / totalActive) * 100 : 0;
+      
+      return {
+        date: date.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' }),
+        rate: attendanceRate,
+        present: presentCount
+      };
+    });
+
+    // Late arrivals trend
+    const lateArrivalsData = sampledDates.map(date => {
+      const dateStr = date.toISOString().split('T')[0];
+      const dayWorkRecords = workRecords[dateStr] || {};
+      const lateCount = Object.values(dayWorkRecords).filter(record => record.late).length;
+      const totalPresent = Object.keys(dayWorkRecords).length;
+      
+      return {
+        date: date.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' }),
+        late: lateCount,
+        onTime: totalPresent - lateCount
+      };
+    });
 
     return {
-      departmentChartData,
-      branchChartData,
-      checkinTrendData,
-      topHardworkingData
+      cashFlowUSDData,
+      cashFlowVNDData,
+      attendanceData,
+      lateArrivalsData
     };
-  }, [filteredEmployees, checkins, workRecords, performanceRankings.mostHardworking]);
+  }, [filteredEmployees, salaryPayments, workRecords, getDateRange]);
 
   // Get unique values for filter dropdowns
   const filterOptions = useMemo(() => {
@@ -467,7 +542,25 @@ export default function DashboardPage() {
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold text-red-800 mb-4">Filters</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
               <select
@@ -553,7 +646,7 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-gray-600">Vietnamese Employees</p>
                 <p className="text-2xl font-bold text-red-800">{statistics.vietnamEmployees}</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {statistics.otherBranches} employees from other branches
+                  {statistics.otherBranches} from other branches
                 </p>
               </div>
             </div>
@@ -561,116 +654,112 @@ export default function DashboardPage() {
           
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-red-100">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              <div className="p-3 rounded-full bg-green-100">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Present today</p>
-                <p className="text-2xl font-bold text-red-800">{statistics.employeesCheckedInToday}</p>
-                <p className="text-xs text-red-600 mt-1">
-                  {statistics.lateEmployeesToday} employees late
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-red-100">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Check-ins today</p>
-                <p className="text-2xl font-bold text-red-800">{statistics.todayCheckins}</p>
+                <p className="text-sm font-medium text-gray-600">Cash Flow (USD)</p>
+                <p className="text-2xl font-bold text-green-800">${statistics.totalUSD.toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {statistics.todayCheckins > 0 ? 'Active' : 'No check-ins yet'}
+                  Selected period
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-blue-100">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Cash Flow (VND)</p>
+                <p className="text-2xl font-bold text-blue-800">{(statistics.totalVND / 1000000).toFixed(1)}M</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Selected period
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Charts Section */}
+        {/* Cash Flow Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Department Distribution Chart */}
+          {/* Cash Flow USD */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-red-800 mb-4">Employee Distribution by Department</h3>
+            <h3 className="text-lg font-semibold text-red-800 mb-4">Cash Flow - USD</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData.departmentChartData}>
+                <LineChart data={chartData.cashFlowUSDData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                  <Legend />
+                  <Line type="monotone" dataKey="amount" stroke="#10B981" strokeWidth={2} name="USD Amount" dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Cash Flow VND */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-red-800 mb-4">Cash Flow - VND</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData.cashFlowVNDData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => `${(value / 1000000).toFixed(1)}M VND`} />
+                  <Legend />
+                  <Line type="monotone" dataKey="amount" stroke="#3B82F6" strokeWidth={2} name="VND Amount" dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Attendance and Late Arrivals Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Attendance Rate Chart */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-red-800 mb-4">Attendance Rate Over Time</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData.attendanceData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="value" fill="#DC2626" />
+                  <Legend />
+                  <Line type="monotone" dataKey="rate" stroke="#DC2626" strokeWidth={2} name="Attendance Rate (%)" dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="present" stroke="#10B981" strokeWidth={2} name="Present Count" dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Late Arrivals Trend */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-red-800 mb-4">Late Arrivals vs On-Time</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData.lateArrivalsData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="onTime" stackId="a" fill="#10B981" name="On Time" />
+                  <Bar dataKey="late" stackId="a" fill="#EF4444" name="Late" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
-
-          {/* Branch Distribution Pie Chart */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-red-800 mb-4">Employee Distribution by Branch</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData.branchChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#DC2626"
-                    dataKey="value"
-                  >
-                    {chartData.branchChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* Check-in Trend Chart */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-4">Check-in Trend (Last 7 Days)</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData.checkinTrendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="checkins" stroke="#B91C1C" name="Number of check-ins" />
-                <Line type="monotone" dataKey="employees" stroke="#10B981" name="Number of employees working" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Top Hardworking Employees Chart */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-4">Top 5 Most Hardworking Employees</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData.topHardworkingData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="hours" fill="#B91C1C" name="Total Hours" />
-              </BarChart>
-            </ResponsiveContainer>
           </div>
         </div>
 
@@ -771,70 +860,6 @@ export default function DashboardPage() {
                 <p className="text-gray-500 text-center py-4">No data</p>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Top OT (Overtime Hours) - Full Width */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-4">Top OT (Overtime Hours)</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rank
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Employee Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Position
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Department
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Branch
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total Overtime
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {performanceRankings.overtimeRanking.map((emp, index) => (
-                  <tr key={emp.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="w-8 h-8 rounded-full bg-red-100 text-red-800 flex items-center justify-center text-sm font-bold">
-                        {index + 1}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{emp.fullName || emp.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{emp.position}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{emp.department}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{emp.branch}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-bold text-red-600">{emp.totalOvertime.toFixed(1)}h</div>
-                    </td>
-                  </tr>
-                ))}
-                {performanceRankings.overtimeRanking.length === 0 && (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                      No data available
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
           </div>
         </div>
 

@@ -79,6 +79,13 @@ export function computeDailyRecords(checkins, workSettings) {
     const late = standardIn != null ? firstIn > standardIn : false;
     const earlyDeparture = standardOut != null ? lastOut < standardOut : false;
     
+    // Calculate late minutes (how many minutes late for check-in)
+    const lateMinutes = (late && standardIn != null) ? Math.max(0, firstIn - standardIn) : 0;
+    
+    // Calculate shortage hours (difference between standard hours and actual worked hours)
+    const standardHours = workSettings.standardHours || 8;
+    const shortageHours = Math.max(0, standardHours - totalHours);
+    
     let status = 'Bình thường';
     if (late && earlyDeparture) status = 'Trễ & Sớm';
     else if (late) status = 'Trễ giờ';
@@ -92,7 +99,9 @@ export function computeDailyRecords(checkins, workSettings) {
       late,
       earlyDeparture,
       firstIn,
-      lastOut
+      lastOut,
+      lateMinutes,
+      shortageHours: +shortageHours.toFixed(2)
     };
   }
   return records;

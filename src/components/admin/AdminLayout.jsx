@@ -22,7 +22,8 @@ export default function AdminLayout({ children }) {
     <div className="flex min-h-screen bg-gray-50 font-sans">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200/80 flex flex-col fixed h-full left-0 top-0">
-        <div className="p-6 border-b border-gray-200/80">
+        <div className="p-6 border-b border-gray-200/80 flex items-center gap-3">
+          <img src="/logo-kama.png" alt="Logo" className="h-16 w-auto" />
           <h1 className="text-2xl font-bold text-red-600 tracking-tight">Admin</h1>
         </div>
 

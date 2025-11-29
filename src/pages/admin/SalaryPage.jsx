@@ -29,12 +29,18 @@ const SalaryTable = ({ data }) => {
     );
   }
 
+  const formatCurrency = (amount, currency) => {
+    const formatted = amount.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    return currency === 'VND' ? `${formatted} ₫` : `$${formatted}`;
+  };
+
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
             <th scope="col" className="py-3.5 px-4 text-left text-sm font-semibold text-gray-600 flex items-center gap-2"><User size={16} />Employee</th>
+            <th scope="col" className="py-3.5 px-4 text-center text-sm font-semibold text-gray-600">Currency</th>
             <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-gray-600">Base Salary</th>
             <th scope="col" className="py-3.5 px-4 text-center text-sm font-semibold text-gray-600">Work Days</th>
             <th scope="col" className="py-3.5 px-4 text-right text-sm font-semibold text-gray-600">Daily Salary</th>
@@ -52,14 +58,19 @@ const SalaryTable = ({ data }) => {
                 <div className="font-medium text-gray-900">{emp.fullName || '—'}</div>
                 <div className="text-gray-500">{emp.id}</div>
               </td>
-              <td className="whitespace-nowrap py-4 px-4 text-right text-sm text-gray-600">{emp.baseSalary?.toLocaleString() || 0}</td>
+              <td className="whitespace-nowrap py-4 px-4 text-center text-sm">
+                <span className={`px-2 py-1 rounded text-xs font-medium ${emp.currency === 'VND' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                  {emp.currency}
+                </span>
+              </td>
+              <td className="whitespace-nowrap py-4 px-4 text-right text-sm text-gray-600">{formatCurrency(emp.baseSalary || 0, emp.currency)}</td>
               <td className="whitespace-nowrap py-4 px-4 text-center text-sm text-gray-600">{emp.workDays}</td>
-              <td className="whitespace-nowrap py-4 px-4 text-right text-sm text-gray-600">{emp.baseSalaryCalculated.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+              <td className="whitespace-nowrap py-4 px-4 text-right text-sm text-gray-600">{formatCurrency(emp.baseSalaryCalculated, emp.currency)}</td>
               <td className="whitespace-nowrap py-4 px-4 text-center text-sm text-gray-600">{emp.otHours}</td>
-              <td className="whitespace-nowrap py-4 px-4 text-right text-sm text-gray-600">{emp.otSalary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+              <td className="whitespace-nowrap py-4 px-4 text-right text-sm text-gray-600">{formatCurrency(emp.otSalary, emp.currency)}</td>
               <td className="whitespace-nowrap py-4 px-4 text-center text-sm text-gray-600">{emp.sundayWorkDays}</td>
-              <td className="whitespace-nowrap py-4 px-4 text-right text-sm text-gray-600">{emp.sundaySalary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-              <td className="whitespace-nowrap py-4 px-4 text-right text-sm font-bold text-red-600">{emp.totalSalary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+              <td className="whitespace-nowrap py-4 px-4 text-right text-sm text-gray-600">{formatCurrency(emp.sundaySalary, emp.currency)}</td>
+              <td className="whitespace-nowrap py-4 px-4 text-right text-sm font-bold text-red-600">{formatCurrency(emp.totalSalary, emp.currency)}</td>
             </tr>
           ))}
         </tbody>
@@ -134,6 +145,24 @@ const SalaryPage = () => {
 
   const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
 
+  // Helper function to determine currency based on branch/region
+  const getCurrency = (branch) => {
+    if (!branch) return 'VND';
+    const branchLower = branch.toLowerCase();
+    
+    // Vietnam regions use VND
+    const vietnamRegions = [
+      'hà nội', 'hồ chí minh', 'đà nẵng', 'hải phòng', 'cần thơ',
+      'hanoi', 'ho chi minh', 'da nang', 'hai phong', 'can tho',
+      'miền bắc', 'miền trung', 'miền nam',
+      'northern', 'central', 'southern',
+      'vietnam', 'việt nam', 'vn'
+    ];
+    
+    const isVietnam = vietnamRegions.some(region => branchLower.includes(region));
+    return isVietnam ? 'VND' : 'USD';
+  };
+
   const salaryData = useMemo(() => {
     if (!employees.length) return [];
 
@@ -141,6 +170,7 @@ const SalaryPage = () => {
     const daysInMonth = getDaysInMonth(year, month);
 
     return employees.map((employee) => {
+      const currency = getCurrency(employee.branch);
       const baseSalary = Number(employee.baseSalary) || 0;
       const dailyRate = daysInMonth > 0 ? baseSalary / daysInMonth : 0;
       const hourlyRate = dailyRate / 8;
@@ -176,6 +206,7 @@ const SalaryPage = () => {
 
       return {
         ...employee,
+        currency,
         workDays,
         otHours,
         sundayWorkDays,
@@ -189,13 +220,27 @@ const SalaryPage = () => {
 
   const summaryStats = useMemo(() => {
     const totalEmployees = salaryData.length;
-    const totalSalary = salaryData.reduce((sum, emp) => sum + emp.totalSalary, 0);
     const totalWorkDays = salaryData.reduce((sum, emp) => sum + emp.workDays, 0);
     const totalOtHours = salaryData.reduce((sum, emp) => sum + emp.otHours, 0);
+    
+    // Separate totals by currency
+    const vndEmployees = salaryData.filter(emp => emp.currency === 'VND');
+    const usdEmployees = salaryData.filter(emp => emp.currency === 'USD');
+    
+    const totalSalaryVND = vndEmployees.reduce((sum, emp) => sum + emp.totalSalary, 0);
+    const totalSalaryUSD = usdEmployees.reduce((sum, emp) => sum + emp.totalSalary, 0);
+    
+    const avgSalaryVND = vndEmployees.length > 0 ? totalSalaryVND / vndEmployees.length : 0;
+    const avgSalaryUSD = usdEmployees.length > 0 ? totalSalaryUSD / usdEmployees.length : 0;
 
     return {
       totalEmployees,
-      totalSalary,
+      totalSalaryVND,
+      totalSalaryUSD,
+      avgSalaryVND,
+      avgSalaryUSD,
+      vndCount: vndEmployees.length,
+      usdCount: usdEmployees.length,
       totalWorkDays,
       totalOtHours,
     };
@@ -205,6 +250,7 @@ const SalaryPage = () => {
     const dataToExport = salaryData.map(emp => ({
       'Employee ID': emp.id,
       'Full Name': emp.fullName || '—',
+      'Currency': emp.currency,
       'Base Salary': emp.baseSalary || 0,
       'Work Days': emp.workDays,
       'Daily Salary': emp.baseSalaryCalculated,
@@ -265,10 +311,58 @@ const SalaryPage = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard icon={<DollarSign size={24} className="text-green-600" />} label="Total Salary Paid" value={summaryStats.totalSalary.toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' ₫'} color="bg-green-100" />
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="rounded-full p-3 bg-green-100">
+              <DollarSign size={24} className="text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Total Salary Paid</p>
+            </div>
+          </div>
+          <div className="space-y-1 ml-14">
+            {summaryStats.vndCount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">VND ({summaryStats.vndCount}):</span>
+                <span className="text-sm font-semibold text-blue-600">{summaryStats.totalSalaryVND.toLocaleString(undefined, { maximumFractionDigits: 0 })} ₫</span>
+              </div>
+            )}
+            {summaryStats.usdCount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">USD ({summaryStats.usdCount}):</span>
+                <span className="text-sm font-semibold text-green-600">${summaryStats.totalSalaryUSD.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        
         <StatCard icon={<Briefcase size={24} className="text-blue-600" />} label="Total Work Days" value={summaryStats.totalWorkDays} color="bg-blue-100" />
         <StatCard icon={<Clock size={24} className="text-orange-600" />} label="Total OT Hours" value={summaryStats.totalOtHours} color="bg-orange-100" />
-        <StatCard icon={<TrendingUp size={24} className="text-purple-600" />} label="Average Salary" value={(summaryStats.totalEmployees > 0 ? (summaryStats.totalSalary / summaryStats.totalEmployees) : 0).toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' ₫'} color="bg-purple-100" />
+        
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="rounded-full p-3 bg-purple-100">
+              <TrendingUp size={24} className="text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Average Salary</p>
+            </div>
+          </div>
+          <div className="space-y-1 ml-14">
+            {summaryStats.vndCount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">VND:</span>
+                <span className="text-sm font-semibold text-blue-600">{summaryStats.avgSalaryVND.toLocaleString(undefined, { maximumFractionDigits: 0 })} ₫</span>
+              </div>
+            )}
+            {summaryStats.usdCount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">USD:</span>
+                <span className="text-sm font-semibold text-green-600">${summaryStats.avgSalaryUSD.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Salary Table */}

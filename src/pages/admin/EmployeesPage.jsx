@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useToast } from '../../components/ui/useToast.js';
 import { getDb } from '../../lib/firebaseClient.js';
-import { Search, X, UserPlus, Edit, Lock, Filter } from 'lucide-react';
+import { Search, X, UserPlus, Edit, Lock, Filter, Trash2 } from 'lucide-react';
 
 // ==== DANH SÁCH LỰA CHỌN NHANH ====
 const QUICK_OPTIONS = {
@@ -282,7 +282,8 @@ export default function EmployeesPage() {
   const [saving, setSaving] = useState(false);
   const [filterDept, setFilterDept] = useState('');
   const [filterBranch, setFilterBranch] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({ position: '' });
+  const [showFilters, setShowFilters] = useState(true);
 
   useEffect(() => {
     const unsub = getDb().then(({ database, ref, onValue }) => {
@@ -325,6 +326,11 @@ export default function EmployeesPage() {
     // Lọc theo chi nhánh
     if (filterBranch) {
       result = result.filter(e => e.branch === filterBranch);
+    }
+    
+    // Lọc theo position
+    if (filters.position) {
+      result = result.filter(e => e.position === filters.position);
     }
     
     return result;
@@ -447,6 +453,23 @@ export default function EmployeesPage() {
     }
   };
 
+  const handleDelete = async (emp) => {
+    if (!confirm(`Are you sure you want to delete employee "${emp.fullName}" (${emp.id})?\n\nThis action cannot be undone!`)) {
+      return;
+    }
+
+    try {
+      const { database, ref, remove } = await getDb();
+      await remove(ref(database, `employees/${emp.id}`));
+      addToast({ type: 'success', message: `Employee "${emp.fullName}" deleted successfully.` });
+    } catch (error) {
+      console.error('Delete error:', error);
+      addToast({ type: 'error', message: 'Could not delete employee.' });
+    }
+  };
+
+
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -487,31 +510,59 @@ export default function EmployeesPage() {
       {/* Bộ lọc nhanh */}
       {showFilters && (
         <div className="bg-white rounded-lg shadow p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Department ({uniqueDepartments.length})
+              </label>
               <select
                 value={filterDept}
                 onChange={(e) => setFilterDept(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
               >
                 <option value="">All Departments</option>
-                {uniqueDepartments.map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
+                {uniqueDepartments.map(dept => {
+                  const count = employees.filter(e => e.department === dept).length;
+                  return (
+                    <option key={dept} value={dept}>{dept} ({count})</option>
+                  );
+                })}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Branch/Country ({uniqueBranches.length})
+              </label>
               <select
                 value={filterBranch}
                 onChange={(e) => setFilterBranch(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
               >
                 <option value="">All Branches</option>
-                {uniqueBranches.map(branch => (
-                  <option key={branch} value={branch}>{branch}</option>
-                ))}
+                {uniqueBranches.map(branch => {
+                  const count = employees.filter(e => e.branch === branch).length;
+                  return (
+                    <option key={branch} value={branch}>{branch} ({count})</option>
+                  );
+                })}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Position ({uniquePositions.length})
+              </label>
+              <select
+                value={filters.position || ''}
+                onChange={(e) => setFilters({ ...filters, position: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
+              >
+                <option value="">All Positions</option>
+                {uniquePositions.map(pos => {
+                  const count = employees.filter(e => e.position === pos).length;
+                  return (
+                    <option key={pos} value={pos}>{pos} ({count})</option>
+                  );
+                })}
               </select>
             </div>
             <div className="flex items-end">
@@ -519,6 +570,7 @@ export default function EmployeesPage() {
                 onClick={() => {
                   setFilterDept('');
                   setFilterBranch('');
+                  setFilters({ position: '' });
                 }}
                 className="w-full px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
               >
@@ -564,18 +616,29 @@ export default function EmployeesPage() {
                     </span>
                   </td>
                   <td className="px-4 py-2 border text-center">
-                    <button
-                      onClick={() => handleOpenModal(emp)}
-                      className="px-2 py-1 text-sm bg-gray-700 text-white rounded hover:bg-gray-800 mr-2"
-                    >
-                      <Edit size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleToggleActive(emp)}
-                      className={`px-2 py-1 text-sm rounded ${emp.active !== false ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}
-                    >
-                      {emp.active !== false ? 'Deactivate' : 'Activate'}
-                    </button>
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => handleOpenModal(emp)}
+                        className="px-2 py-1 text-sm bg-gray-700 text-white rounded hover:bg-gray-800"
+                        title="Edit"
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleToggleActive(emp)}
+                        className={`px-2 py-1 text-sm rounded ${emp.active !== false ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`}
+                        title={emp.active !== false ? 'Deactivate' : 'Activate'}
+                      >
+                        {emp.active !== false ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(emp)}
+                        className="px-2 py-1 text-sm bg-red-100 text-red-800 rounded hover:bg-red-200"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

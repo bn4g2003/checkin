@@ -17,10 +17,11 @@ export default function WifiCheckinsPage() {
   const [wifiForm, setWifiForm] = useState({ name: '', publicIP: '', localIP: '' });
   const [editingWifi, setEditingWifi] = useState(null);
   const [status, setStatus] = useState(null);
-  const [filters, setFilters] = useState({ date: '', type: '', employee: '', team: '' });
+  const [filters, setFilters] = useState({ date: '', type: '', employee: '', team: '', dateFrom: '', dateTo: '' });
   const [debouncedEmployee, setDebouncedEmployee] = useState('');
   const [page, setPage] = useState(1);
   const [employees, setEmployees] = useState([]);
+  const [quickFilter, setQuickFilter] = useState('');
   const [workSettings, setWorkSettings] = useState({
     standardCheckin: '09:00',
     standardCheckout: '18:00',
@@ -63,6 +64,9 @@ export default function WifiCheckinsPage() {
   const [monthlyCache, setMonthlyCache] = useState({}); // { 'YYYY-MM': summaryArray }
   const historyPageSize = 10; // Dedicated page size for history to avoid conflicts
   const [modalPhoto, setModalPhoto] = useState(null); // modal photo state
+  const [workHoursFilters, setWorkHoursFilters] = useState({ team: '', employee: '' });
+  const [debouncedWorkEmployee, setDebouncedWorkEmployee] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   // Export history (filtered results) to XLSX
   const exportHistoryXLSX = async () => {
     try {
@@ -326,10 +330,52 @@ export default function WifiCheckinsPage() {
     return map;
   }, [employees]);
 
+  // Quick filter handler
+  const handleQuickFilterHistory = (type) => {
+    const now = new Date();
+    let from, to;
+
+    switch(type) {
+      case 'today':
+        from = to = now.toISOString().split('T')[0];
+        break;
+      case 'yesterday':
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        from = to = yesterday.toISOString().split('T')[0];
+        break;
+      case 'thisWeek':
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        from = startOfWeek.toISOString().split('T')[0];
+        to = now.toISOString().split('T')[0];
+        break;
+      case 'thisMonth':
+        from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        break;
+      case 'lastMonth':
+        from = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+        to = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+        break;
+      case 'thisYear':
+        from = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+        to = new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0];
+        break;
+      default:
+        from = to = '';
+    }
+
+    setFilters({ ...filters, dateFrom: from, dateTo: to, date: '' });
+    setQuickFilter(type);
+    setPage(1);
+  };
+
   // history filters + pagination
   const filteredHistory = useMemo(() => {
     let list = checkins;
-    // robust local-date filter to avoid timezone/format issues
+    
+    // Single date filter (legacy)
     if (filters.date) {
       const start = new Date(`${filters.date}T00:00:00`);
       const end = new Date(`${filters.date}T23:59:59.999`);
@@ -339,6 +385,25 @@ export default function WifiCheckinsPage() {
         return ts >= start && ts <= end;
       });
     }
+    
+    // Date range filter
+    if (filters.dateFrom) {
+      const start = new Date(`${filters.dateFrom}T00:00:00`);
+      list = list.filter(c => {
+        if (!c.timestamp) return false;
+        const ts = new Date(c.timestamp);
+        return ts >= start;
+      });
+    }
+    if (filters.dateTo) {
+      const end = new Date(`${filters.dateTo}T23:59:59.999`);
+      list = list.filter(c => {
+        if (!c.timestamp) return false;
+        const ts = new Date(c.timestamp);
+        return ts <= end;
+      });
+    }
+    
     if (filters.type) list = list.filter(c => c.type === filters.type);
     if (debouncedEmployee) {
       const q = debouncedEmployee.toLowerCase();
@@ -352,7 +417,7 @@ export default function WifiCheckinsPage() {
       });
     }
     return list;
-  }, [checkins, filters.date, filters.type, debouncedEmployee, filters.team, employeeMap]);
+  }, [checkins, filters.date, filters.dateFrom, filters.dateTo, filters.type, debouncedEmployee, filters.team, employeeMap]);
   const totalPages = Math.max(1, Math.ceil(filteredHistory.length / historyPageSize));
   const pageHistory = filteredHistory.slice((page - 1) * historyPageSize, page * historyPageSize);
   console.log('DEBUG pagination:', { 
@@ -373,14 +438,8 @@ export default function WifiCheckinsPage() {
   useEffect(() => { if (wifiPage > wifiTotalPages) setWifiPage(1); }, [wifiTotalPages, wifiPage]);
   // Daily
   const [dailyPage, setDailyPage] = useState(1);
-  const dailyTotalPages = Math.max(1, Math.ceil(dailyRecords.length / commonPageSize));
-  const dailyPageList = dailyRecords.slice((dailyPage - 1) * commonPageSize, dailyPage * commonPageSize);
-  useEffect(() => { if (dailyPage > dailyTotalPages) setDailyPage(1); }, [dailyTotalPages, dailyPage]);
   // Monthly
   const [monthlyPage, setMonthlyPage] = useState(1);
-  const monthlyTotalPages = Math.max(1, Math.ceil(monthlySummary.length / commonPageSize));
-  const monthlyPageList = monthlySummary.slice((monthlyPage - 1) * commonPageSize, monthlyPage * commonPageSize);
-  useEffect(() => { if (monthlyPage > monthlyTotalPages) setMonthlyPage(1); }, [monthlyTotalPages, monthlyPage]);
 
   // debounce employee filter 300ms
   useEffect(() => {
@@ -388,12 +447,17 @@ export default function WifiCheckinsPage() {
     return () => clearTimeout(t);
   }, [filters.employee]);
 
-  // Compute daily records for today when checkins change
+  // debounce work hours employee filter 300ms
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedWorkEmployee(workHoursFilters.employee), 300);
+    return () => clearTimeout(t);
+  }, [workHoursFilters.employee]);
+
+  // Compute daily records for selected date when checkins change
   useEffect(() => {
     if (!checkins.length) { setDailyRecords([]); return; }
-    const today = new Date().toISOString().slice(0, 10);
-    const todays = checkins.filter(c => c.timestamp?.startsWith(today));
-    const map = computeDailyRecords(todays, workSettings);
+    const dateCheckins = checkins.filter(c => c.timestamp?.startsWith(selectedDate));
+    const map = computeDailyRecords(dateCheckins, workSettings);
     const arr = Object.values(map);
     setDailyRecords(arr);
     // persist to Firebase workRecords/{date}/{employeeId}
@@ -401,11 +465,11 @@ export default function WifiCheckinsPage() {
       try {
         const { database, ref, set } = await getDb();
         for (const r of arr) {
-          await set(ref(database, `workRecords/${today}/${r.employeeId}`), r);
+          await set(ref(database, `workRecords/${selectedDate}/${r.employeeId}`), r);
         }
       } catch { /* ignore persist errors for now */ }
     })();
-  }, [checkins, workSettings]);
+  }, [checkins, workSettings, selectedDate]);
 
   // Compute monthly summary with cache
   useEffect(() => {
@@ -416,6 +480,94 @@ export default function WifiCheckinsPage() {
     setMonthlyCache(cache => ({ ...cache, [monthKey]: summary }));
     setMonthlySummary(summary);
   }, [checkins, workSettings, monthlyCache]);
+
+  // Filter daily records
+  const filteredDailyRecords = useMemo(() => {
+    let list = dailyRecords;
+    
+    // Filter by team
+    if (workHoursFilters.team) {
+      list = list.filter(r => {
+        const emp = employeeMap[r.employeeId];
+        return emp && emp.team === workHoursFilters.team;
+      });
+    }
+    
+    // Filter by employee
+    if (debouncedWorkEmployee) {
+      const q = debouncedWorkEmployee.toLowerCase();
+      list = list.filter(r => 
+        r.employeeId?.toLowerCase().includes(q) || 
+        r.employeeName?.toLowerCase().includes(q)
+      );
+    }
+    
+    return list;
+  }, [dailyRecords, workHoursFilters.team, debouncedWorkEmployee, employeeMap]);
+
+  // Filter monthly summary
+  const filteredMonthlySummary = useMemo(() => {
+    let list = monthlySummary;
+    
+    // Filter by team
+    if (workHoursFilters.team) {
+      list = list.filter(r => {
+        const emp = employeeMap[r.employeeId];
+        return emp && emp.team === workHoursFilters.team;
+      });
+    }
+    
+    // Filter by employee
+    if (debouncedWorkEmployee) {
+      const q = debouncedWorkEmployee.toLowerCase();
+      list = list.filter(r => 
+        r.employeeId?.toLowerCase().includes(q) || 
+        r.employeeName?.toLowerCase().includes(q)
+      );
+    }
+    
+    return list;
+  }, [monthlySummary, workHoursFilters.team, debouncedWorkEmployee, employeeMap]);
+
+  // Calculate summary statistics for daily records
+  const dailySummaryStats = useMemo(() => {
+    const totalHours = filteredDailyRecords.reduce((sum, r) => sum + (parseFloat(r.totalHours) || 0), 0);
+    const totalShortageHours = filteredDailyRecords.reduce((sum, r) => sum + (parseFloat(r.shortageHours) || 0), 0);
+    const lateCount = filteredDailyRecords.filter(r => r.late).length;
+    
+    return {
+      totalHours: totalHours.toFixed(1),
+      totalLateHours: totalShortageHours.toFixed(1),
+      lateCount,
+      employeeCount: filteredDailyRecords.length
+    };
+  }, [filteredDailyRecords]);
+
+  // Calculate summary statistics for monthly records
+  const monthlySummaryStats = useMemo(() => {
+    const totalHours = filteredMonthlySummary.reduce((sum, r) => sum + (parseFloat(r.totalHours) || 0), 0);
+    const totalDays = filteredMonthlySummary.reduce((sum, r) => sum + (r.days || 0), 0);
+    const totalLateCount = filteredMonthlySummary.reduce((sum, r) => sum + (r.lateCount || 0), 0);
+    const totalEarlyCount = filteredMonthlySummary.reduce((sum, r) => sum + (r.earlyDepartureCount || 0), 0);
+    
+    return {
+      totalHours: totalHours.toFixed(1),
+      totalDays,
+      totalLateCount,
+      totalEarlyCount,
+      employeeCount: filteredMonthlySummary.length
+    };
+  }, [filteredMonthlySummary]);
+
+  // Pagination for filtered daily records
+  const dailyTotalPages = Math.max(1, Math.ceil(filteredDailyRecords.length / commonPageSize));
+  const dailyPageList = filteredDailyRecords.slice((dailyPage - 1) * commonPageSize, dailyPage * commonPageSize);
+  useEffect(() => { if (dailyPage > dailyTotalPages) setDailyPage(1); }, [dailyTotalPages, dailyPage]);
+
+  // Pagination for filtered monthly summary
+  const monthlyTotalPages = Math.max(1, Math.ceil(filteredMonthlySummary.length / commonPageSize));
+  const monthlyPageList = filteredMonthlySummary.slice((monthlyPage - 1) * commonPageSize, monthlyPage * commonPageSize);
+  useEffect(() => { if (monthlyPage > monthlyTotalPages) setMonthlyPage(1); }, [monthlyTotalPages, monthlyPage]);
 
   const saveWorkSettings = async (e) => {
     e.preventDefault();
@@ -545,13 +697,64 @@ export default function WifiCheckinsPage() {
           {activeTab === 'history' && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">Check-in History</h2>
+              
+              {/* Quick Filters */}
+              <div className="bg-gray-50 p-3 rounded border">
+                <label className="block mb-2 text-xs font-semibold">Quick Filters</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: 'today', label: 'Today' },
+                    { value: 'yesterday', label: 'Yesterday' },
+                    { value: 'thisWeek', label: 'This Week' },
+                    { value: 'thisMonth', label: 'This Month' },
+                    { value: 'lastMonth', label: 'Last Month' },
+                    { value: 'thisYear', label: 'This Year' }
+                  ].map(filter => (
+                    <button
+                      key={filter.value}
+                      onClick={() => handleQuickFilterHistory(filter.value)}
+                      className={`px-3 py-1 rounded text-xs font-medium transition ${
+                        quickFilter === filter.value
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white text-gray-700 border hover:bg-gray-100'
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Advanced Filters */}
               <div className="grid grid-cols-1 md:grid-cols-6 gap-2 text-xs bg-gray-50 p-3 rounded border">
                 <div>
-                  <label className="block mb-1">Date</label>
-                  <input type="date" value={filters.date} onChange={e => { setFilters({ ...filters, date: e.target.value }); setPage(1); }} className="w-full px-2 py-1 border rounded" />
+                  <label className="block mb-1 font-medium">From Date</label>
+                  <input 
+                    type="date" 
+                    value={filters.dateFrom} 
+                    onChange={e => { 
+                      setFilters({ ...filters, dateFrom: e.target.value, date: '' }); 
+                      setQuickFilter('');
+                      setPage(1); 
+                    }} 
+                    className="w-full px-2 py-1 border rounded" 
+                  />
                 </div>
                 <div>
-                  <label className="block mb-1">Type</label>
+                  <label className="block mb-1 font-medium">To Date</label>
+                  <input 
+                    type="date" 
+                    value={filters.dateTo} 
+                    onChange={e => { 
+                      setFilters({ ...filters, dateTo: e.target.value, date: '' }); 
+                      setQuickFilter('');
+                      setPage(1); 
+                    }} 
+                    className="w-full px-2 py-1 border rounded" 
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Type</label>
                   <select value={filters.type} onChange={e => { setFilters({ ...filters, type: e.target.value }); setPage(1); }} className="w-full px-2 py-1 border rounded">
                     <option value="">All</option>
                     <option value="in">Check-in</option>
@@ -559,7 +762,7 @@ export default function WifiCheckinsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block mb-1">Team</label>
+                  <label className="block mb-1 font-medium">Team</label>
                   <select value={filters.team} onChange={e => { setFilters({ ...filters, team: e.target.value }); setPage(1); }} className="w-full px-2 py-1 border rounded">
                     <option value="">All Teams</option>
                     {uniqueTeams.map(team => (
@@ -567,12 +770,12 @@ export default function WifiCheckinsPage() {
                     ))}
                   </select>
                 </div>
-                <div className="md:col-span-2">
-                  <label className="block mb-1">Employee</label>
-                  <input value={filters.employee} onChange={e => { setFilters({ ...filters, employee: e.target.value }); setPage(1); }} className="w-full px-2 py-1 border rounded" placeholder="Search by name or ID" />
+                <div>
+                  <label className="block mb-1 font-medium">Employee</label>
+                  <input value={filters.employee} onChange={e => { setFilters({ ...filters, employee: e.target.value }); setPage(1); }} className="w-full px-2 py-1 border rounded" placeholder="Name or ID" />
                 </div>
                 <div className="flex items-end gap-1">
-                  <button onClick={() => { setFilters({ date: '', type: '', employee: '', team: '' }); setPage(1); }} className="px-3 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200">Clear</button>
+                  <button onClick={() => { setFilters({ date: '', dateFrom: '', dateTo: '', type: '', employee: '', team: '' }); setQuickFilter(''); setPage(1); }} className="px-3 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200">Clear All</button>
                   <button onClick={exportHistoryXLSX} className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Export</button>
                 </div>
               </div>
@@ -673,10 +876,81 @@ export default function WifiCheckinsPage() {
                   <button disabled={savingSettings} type="submit" className="px-3 py-2 bg-indigo-600 text-white rounded text-xs disabled:opacity-50">Save</button>
                 </div>
               </form>
+
+              {/* Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs bg-gray-50 p-3 rounded border">
+                <div>
+                  <label className="block mb-1 font-medium">Team</label>
+                  <select 
+                    value={workHoursFilters.team} 
+                    onChange={e => { 
+                      setWorkHoursFilters({ ...workHoursFilters, team: e.target.value }); 
+                      setDailyPage(1); 
+                      setMonthlyPage(1); 
+                    }} 
+                    className="w-full px-2 py-1 border rounded"
+                  >
+                    <option value="">All Teams</option>
+                    {uniqueTeams.map(team => (
+                      <option key={team} value={team}>{team}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Employee</label>
+                  <input 
+                    value={workHoursFilters.employee} 
+                    onChange={e => { 
+                      setWorkHoursFilters({ ...workHoursFilters, employee: e.target.value }); 
+                      setDailyPage(1); 
+                      setMonthlyPage(1); 
+                    }} 
+                    className="w-full px-2 py-1 border rounded" 
+                    placeholder="Name or ID" 
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button 
+                    onClick={() => { 
+                      setWorkHoursFilters({ team: '', employee: '' }); 
+                      setDailyPage(1); 
+                      setMonthlyPage(1); 
+                    }} 
+                    className="px-3 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-semibold mb-2 text-sm">Daily Records (Today)</h3>
-                  {dailyRecords.length === 0 ? <div className="text-xs text-gray-500">Not enough data.</div> : (
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-semibold text-sm">Daily Records</h3>
+                      <input 
+                        type="date" 
+                        value={selectedDate} 
+                        onChange={e => setSelectedDate(e.target.value)}
+                        className="px-2 py-1 border rounded text-xs"
+                      />
+                      <button 
+                        onClick={() => setSelectedDate(new Date().toISOString().slice(0, 10))}
+                        className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-xs hover:bg-indigo-100"
+                      >
+                        Today
+                      </button>
+                    </div>
+                    {filteredDailyRecords.length > 0 && (
+                      <div className="flex gap-4 text-xs">
+                        <span className="text-gray-600">Employees: <span className="font-semibold text-indigo-600">{dailySummaryStats.employeeCount}</span></span>
+                        <span className="text-gray-600">Total Hours: <span className="font-semibold text-green-600">{dailySummaryStats.totalHours}h</span></span>
+                        <span className="text-gray-600">Late Hours: <span className="font-semibold text-red-600">{dailySummaryStats.totalLateHours}h</span></span>
+                        <span className="text-gray-600">Late Count: <span className="font-semibold text-orange-600">{dailySummaryStats.lateCount}</span></span>
+                      </div>
+                    )}
+                  </div>
+                  {filteredDailyRecords.length === 0 ? <div className="text-xs text-gray-500">No data available for {selectedDate}.</div> : (
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-xs">
                         <thead>
@@ -684,6 +958,7 @@ export default function WifiCheckinsPage() {
                             <th className="p-2 text-left">Employee</th>
                             <th className="p-2 text-left">Status</th>
                             <th className="p-2 text-left">Work Hours</th>
+                            <th className="p-2 text-left">Late Hours</th>
                             <th className="p-2 text-left">Late</th>
                             <th className="p-2 text-left">Early</th>
                           </tr>
@@ -693,7 +968,16 @@ export default function WifiCheckinsPage() {
                             <tr key={r.employeeId} className="border-t hover:bg-gray-50">
                               <td className="p-2">{r.employeeName} <span className="text-gray-400">({r.employeeId})</span></td>
                               <td className="p-2">{r.status}</td>
-                              <td className="p-2">{r.totalHours}</td>
+                              <td className="p-2">{r.totalHours}h</td>
+                              <td className="p-2">
+                                {r.shortageHours && r.shortageHours > 0 ? (
+                                  <span className="text-red-600 font-medium">
+                                    {r.shortageHours}h
+                                  </span>
+                                ) : (
+                                  <span className="text-green-600">0h</span>
+                                )}
+                              </td>
                               <td className="p-2">{r.late ? '✔️' : '—'}</td>
                               <td className="p-2">{r.earlyDeparture ? '✔️' : '—'}</td>
                             </tr>
@@ -702,9 +986,9 @@ export default function WifiCheckinsPage() {
                       </table>
                     </div>
                   )}
-                  {dailyRecords.length > 0 && (
+                  {filteredDailyRecords.length > 0 && (
                     <div className="flex items-center justify-between mt-3 text-xs">
-                      <span>Page {dailyPage} / {dailyTotalPages} (Total {dailyRecords.length})</span>
+                      <span>Page {dailyPage} / {dailyTotalPages} (Total {filteredDailyRecords.length})</span>
                       <div className="space-x-2">
                         <button disabled={dailyPage === 1} onClick={() => setDailyPage(p => Math.max(1, p - 1))} className="px-2 py-1 border rounded disabled:opacity-40">Prev</button>
                         <button disabled={dailyPage === dailyTotalPages} onClick={() => setDailyPage(p => Math.min(dailyTotalPages, p + 1))} className="px-2 py-1 border rounded disabled:opacity-40">Next</button>
@@ -715,9 +999,20 @@ export default function WifiCheckinsPage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-sm">Monthly Summary (Current Month)</h3>
-                    <button onClick={exportMonthlyXLSX} className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Export XLSX</button>
+                    <div className="flex items-center gap-4">
+                      {filteredMonthlySummary.length > 0 && (
+                        <div className="flex gap-4 text-xs">
+                          <span className="text-gray-600">Employees: <span className="font-semibold text-indigo-600">{monthlySummaryStats.employeeCount}</span></span>
+                          <span className="text-gray-600">Total Days: <span className="font-semibold text-blue-600">{monthlySummaryStats.totalDays}</span></span>
+                          <span className="text-gray-600">Total Hours: <span className="font-semibold text-green-600">{monthlySummaryStats.totalHours}h</span></span>
+                          <span className="text-gray-600">Late: <span className="font-semibold text-orange-600">{monthlySummaryStats.totalLateCount}</span></span>
+                          <span className="text-gray-600">Early: <span className="font-semibold text-red-600">{monthlySummaryStats.totalEarlyCount}</span></span>
+                        </div>
+                      )}
+                      <button onClick={exportMonthlyXLSX} className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Export XLSX</button>
+                    </div>
                   </div>
-                  {monthlySummary.length === 0 ? <div className="text-xs text-gray-500">No monthly data.</div> : (
+                  {filteredMonthlySummary.length === 0 ? <div className="text-xs text-gray-500">No data available.</div> : (
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-xs">
                         <thead>
@@ -743,9 +1038,9 @@ export default function WifiCheckinsPage() {
                       </table>
                     </div>
                   )}
-                  {monthlySummary.length > 0 && (
+                  {filteredMonthlySummary.length > 0 && (
                     <div className="flex items-center justify-between mt-3 text-xs">
-                      <span>Page {monthlyPage} / {monthlyTotalPages} (Total {monthlySummary.length})</span>
+                      <span>Page {monthlyPage} / {monthlyTotalPages} (Total {filteredMonthlySummary.length})</span>
                       <div className="space-x-2">
                         <button disabled={monthlyPage === 1} onClick={() => setMonthlyPage(p => Math.max(1, p - 1))} className="px-2 py-1 border rounded disabled:opacity-40">Prev</button>
                         <button disabled={monthlyPage === monthlyTotalPages} onClick={() => setMonthlyPage(p => Math.min(monthlyTotalPages, p + 1))} className="px-2 py-1 border rounded disabled:opacity-40">Next</button>

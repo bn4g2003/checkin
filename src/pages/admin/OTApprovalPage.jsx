@@ -9,7 +9,13 @@ import {
   AlertCircle,
   User,
   Filter,
-  Search
+  Search,
+  Settings,
+  Plus,
+  Edit,
+  Trash2,
+  Save,
+  X
 } from 'lucide-react';
 import { useToast } from '../../components/ui/useToast';
 
@@ -22,6 +28,14 @@ export default function OTApprovalPage() {
   const [approverNote, setApproverNote] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterEmployee, setFilterEmployee] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [quickFilter, setQuickFilter] = useState('');
+  const [showReasonManager, setShowReasonManager] = useState(false);
+  const [otReasons, setOtReasons] = useState([]);
+  const [newReason, setNewReason] = useState('');
+  const [editingReason, setEditingReason] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -52,12 +66,77 @@ export default function OTApprovalPage() {
         setEmployees(data);
       });
 
+      // Load OT reasons
+      const reasonsRef = ref(database, 'otReasons');
+      onValue(reasonsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const reasonsList = Object.entries(data)
+            .map(([id, value]) => ({ id, ...value }))
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          setOtReasons(reasonsList);
+        } else {
+          // Default reasons if none exist
+          setOtReasons([]);
+        }
+      });
+
       setLoading(false);
     } catch (error) {
       console.error('Error loading data:', error);
       addToast({ type: 'error', message: 'Lỗi khi tải dữ liệu' });
       setLoading(false);
     }
+  };
+
+  // Get unique employees
+  const uniqueEmployees = useMemo(() => {
+    const employeeMap = new Map();
+    otRequests.forEach(req => {
+      if (req.employeeId && !employeeMap.has(req.employeeId)) {
+        employeeMap.set(req.employeeId, {
+          id: req.employeeId,
+          name: req.employeeName
+        });
+      }
+    });
+    return Array.from(employeeMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [otRequests]);
+
+  // Quick filter handler
+  const handleQuickFilter = (type) => {
+    const now = new Date();
+    let from, to;
+
+    switch(type) {
+      case 'today':
+        from = to = now.toISOString().split('T')[0];
+        break;
+      case 'thisWeek':
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        from = startOfWeek.toISOString().split('T')[0];
+        to = now.toISOString().split('T')[0];
+        break;
+      case 'thisMonth':
+        from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        break;
+      case 'lastMonth':
+        from = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+        to = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+        break;
+      case 'thisYear':
+        from = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+        to = new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0];
+        break;
+      default:
+        from = to = '';
+    }
+
+    setDateFrom(from);
+    setDateTo(to);
+    setQuickFilter(type);
   };
 
   const filteredRequests = useMemo(() => {
@@ -78,8 +157,21 @@ export default function OTApprovalPage() {
       );
     }
 
+    // Filter by employee
+    if (filterEmployee) {
+      filtered = filtered.filter(req => req.employeeId === filterEmployee);
+    }
+
+    // Filter by date range
+    if (dateFrom) {
+      filtered = filtered.filter(req => req.date >= dateFrom);
+    }
+    if (dateTo) {
+      filtered = filtered.filter(req => req.date <= dateTo);
+    }
+
     return filtered;
-  }, [otRequests, filterStatus, searchTerm]);
+  }, [otRequests, filterStatus, searchTerm, filterEmployee, dateFrom, dateTo]);
 
   const statistics = useMemo(() => {
     const total = otRequests.length;
@@ -140,6 +232,57 @@ export default function OTApprovalPage() {
     }
   };
 
+  // OT Reason Management
+  const handleAddReason = async () => {
+    if (!newReason.trim()) {
+      addToast({ type: 'error', message: 'Please enter a reason' });
+      return;
+    }
+
+    try {
+      const { database, ref, push } = await getDb();
+      const reasonsRef = ref(database, 'otReasons');
+      
+      await push(reasonsRef, {
+        name: newReason.trim(),
+        order: otReasons.length,
+        active: true,
+        createdAt: new Date().toISOString()
+      });
+
+      setNewReason('');
+      addToast({ type: 'success', message: 'Reason added successfully' });
+    } catch (error) {
+      console.error('Error adding reason:', error);
+      addToast({ type: 'error', message: 'Error adding reason' });
+    }
+  };
+
+  const handleUpdateReason = async (reasonId, updates) => {
+    try {
+      const { database, ref, update } = await getDb();
+      await update(ref(database, `otReasons/${reasonId}`), updates);
+      addToast({ type: 'success', message: 'Reason updated successfully' });
+      setEditingReason(null);
+    } catch (error) {
+      console.error('Error updating reason:', error);
+      addToast({ type: 'error', message: 'Error updating reason' });
+    }
+  };
+
+  const handleDeleteReason = async (reasonId) => {
+    if (!confirm('Are you sure you want to delete this reason?')) return;
+
+    try {
+      const { database, ref, remove } = await getDb();
+      await remove(ref(database, `otReasons/${reasonId}`));
+      addToast({ type: 'success', message: 'Reason deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting reason:', error);
+      addToast({ type: 'error', message: 'Error deleting reason' });
+    }
+  };
+
   const getStatusBadge = (status) => {
     const badges = {
       pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pending', icon: AlertCircle },
@@ -173,9 +316,135 @@ export default function OTApprovalPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-600">
-        <h1 className="text-3xl font-bold text-red-800 mb-2">OT Management</h1>
-        <p className="text-gray-600">Approve and manage overtime requests</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-red-800 mb-2">OT Management</h1>
+            <p className="text-gray-600">Approve and manage overtime requests</p>
+          </div>
+          <button
+            onClick={() => setShowReasonManager(!showReasonManager)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+          >
+            <Settings size={18} />
+            Manage Reasons
+          </button>
+        </div>
       </div>
+
+      {/* OT Reason Manager Modal */}
+      {showReasonManager && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">Manage OT Reasons</h2>
+                <button
+                  onClick={() => setShowReasonManager(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Add New Reason */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Add New Reason</h3>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newReason}
+                    onChange={(e) => setNewReason(e.target.value)}
+                    placeholder="Enter new OT reason..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddReason()}
+                  />
+                  <button
+                    onClick={handleAddReason}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                  >
+                    <Plus size={18} />
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Reasons List */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                  Current Reasons ({otReasons.length})
+                </h3>
+                {otReasons.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No reasons configured yet</p>
+                ) : (
+                  otReasons.map((reason, index) => (
+                    <div key={reason.id} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                      <span className="w-8 h-8 flex items-center justify-center bg-indigo-100 text-indigo-800 rounded-full text-sm font-bold">
+                        {index + 1}
+                      </span>
+                      
+                      {editingReason === reason.id ? (
+                        <>
+                          <input
+                            type="text"
+                            defaultValue={reason.name}
+                            onBlur={(e) => {
+                              if (e.target.value.trim() && e.target.value !== reason.name) {
+                                handleUpdateReason(reason.id, { name: e.target.value.trim() });
+                              } else {
+                                setEditingReason(null);
+                              }
+                            }}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                e.target.blur();
+                              }
+                            }}
+                            className="flex-1 px-3 py-1 border border-indigo-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => setEditingReason(null)}
+                            className="p-2 text-gray-600 hover:text-gray-800"
+                          >
+                            <X size={16} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="flex-1 font-medium text-gray-800">{reason.name}</span>
+                          <button
+                            onClick={() => setEditingReason(reason.id)}
+                            className="p-2 text-indigo-600 hover:text-indigo-800"
+                            title="Edit"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteReason(reason.id)}
+                            className="p-2 text-red-600 hover:text-red-800"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowReasonManager(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -230,9 +499,97 @@ export default function OTApprovalPage() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Quick Filters */}
       <div className="bg-white rounded-lg shadow-md p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Filters</h3>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { value: 'today', label: 'Today' },
+            { value: 'thisWeek', label: 'This Week' },
+            { value: 'thisMonth', label: 'This Month' },
+            { value: 'lastMonth', label: 'Last Month' },
+            { value: 'thisYear', label: 'This Year' }
+          ].map(filter => (
+            <button
+              key={filter.value}
+              onClick={() => handleQuickFilter(filter.value)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                quickFilter === filter.value
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+          <button
+            onClick={() => {
+              setDateFrom('');
+              setDateTo('');
+              setQuickFilter('');
+            }}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+          >
+            Clear Date
+          </button>
+        </div>
+      </div>
+
+      {/* Advanced Filters */}
+      <div className="bg-white rounded-lg shadow-md p-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Advanced Filters</h3>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Calendar size={16} className="inline mr-1" />
+              From Date
+            </label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => {
+                setDateFrom(e.target.value);
+                setQuickFilter('');
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Calendar size={16} className="inline mr-1" />
+              To Date
+            </label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => {
+                setDateTo(e.target.value);
+                setQuickFilter('');
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <User size={16} className="inline mr-1" />
+              Employee ({uniqueEmployees.length})
+            </label>
+            <select
+              value={filterEmployee}
+              onChange={(e) => setFilterEmployee(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
+            >
+              <option value="">All Employees</option>
+              {uniqueEmployees.map(emp => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name} ({emp.id})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Filter size={16} className="inline mr-1" />
@@ -259,10 +616,26 @@ export default function OTApprovalPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, ID, reason..."
+              placeholder="Name, ID, reason..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
             />
           </div>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={() => {
+              setFilterStatus('all');
+              setSearchTerm('');
+              setFilterEmployee('');
+              setDateFrom('');
+              setDateTo('');
+              setQuickFilter('');
+            }}
+            className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+          >
+            Clear All Filters
+          </button>
         </div>
       </div>
 

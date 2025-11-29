@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDb } from '../lib/firebaseClient';
-import { Clock, Calendar, FileText, Send, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Clock, Calendar, FileText, Send, CheckCircle, XCircle, AlertCircle, Filter } from 'lucide-react';
 import { useToast } from '../components/ui/useToast';
 import EmployeeNavbar from '../components/employee/EmployeeNavbar';
 
@@ -12,6 +12,11 @@ export default function OTRegistrationPage() {
   const [employeeName, setEmployeeName] = useState('');
   const [otRequests, setOtRequests] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [otReasons, setOtReasons] = useState([]);
+  const [filters, setFilters] = useState({
+    month: new Date().toISOString().slice(0, 7),
+    status: 'all' // all, pending, approved, rejected
+  });
   
   const [form, setForm] = useState({
     date: '',
@@ -34,7 +39,45 @@ export default function OTRegistrationPage() {
     setEmployeeId(storedId);
     setEmployeeName(storedName || '');
     loadOTRequests(storedId);
+    loadOTReasons();
   }, [navigate, addToast]);
+
+  const loadOTReasons = async () => {
+    try {
+      const { database, ref, onValue } = await getDb();
+      const reasonsRef = ref(database, 'otReasons');
+      
+      onValue(reasonsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const reasonsList = Object.entries(data)
+            .map(([id, value]) => ({ id, ...value }))
+            .filter(r => r.active !== false)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          setOtReasons(reasonsList);
+        } else {
+          // Default reasons if none configured
+          setOtReasons([
+            { id: 'default1', name: 'Urgent Project' },
+            { id: 'default2', name: 'Tight Deadline' },
+            { id: 'default3', name: 'Team Support' },
+            { id: 'default4', name: 'Backlog Work' },
+            { id: 'default5', name: 'Other' }
+          ]);
+        }
+      });
+    } catch (error) {
+      console.error('Error loading OT reasons:', error);
+      // Use default reasons on error
+      setOtReasons([
+        { id: 'default1', name: 'Urgent Project' },
+        { id: 'default2', name: 'Tight Deadline' },
+        { id: 'default3', name: 'Team Support' },
+        { id: 'default4', name: 'Backlog Work' },
+        { id: 'default5', name: 'Other' }
+      ]);
+    }
+  };
 
   const loadOTRequests = async (empId) => {
     try {
@@ -146,6 +189,43 @@ export default function OTRegistrationPage() {
     return <AlertCircle size={20} className="text-yellow-500" />;
   };
 
+  // Filter and calculate statistics
+  const filteredRequests = useMemo(() => {
+    let filtered = otRequests;
+
+    // Filter by month
+    if (filters.month) {
+      filtered = filtered.filter(req => {
+        if (!req.date) return false;
+        const reqMonth = req.date.slice(0, 7);
+        return reqMonth === filters.month;
+      });
+    }
+
+    // Filter by status
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(req => req.status === filters.status);
+    }
+
+    return filtered;
+  }, [otRequests, filters]);
+
+  const statistics = useMemo(() => {
+    const totalSessions = filteredRequests.length;
+    const totalHours = filteredRequests.reduce((sum, req) => sum + (parseFloat(req.hours) || 0), 0);
+    const approved = filteredRequests.filter(req => req.status === 'approved').length;
+    const pending = filteredRequests.filter(req => req.status === 'pending').length;
+    const rejected = filteredRequests.filter(req => req.status === 'rejected').length;
+
+    return {
+      totalSessions,
+      totalHours,
+      approved,
+      pending,
+      rejected
+    };
+  }, [filteredRequests]);
+
   return (
     <>
       <EmployeeNavbar />
@@ -158,6 +238,88 @@ export default function OTRegistrationPage() {
               Overtime (OT) Registration
             </h1>
             <p className="text-gray-600 mt-2">Employee: {employeeName} ({employeeId})</p>
+          </div>
+
+          {/* Filters */}
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar size={16} className="inline mr-1" />
+                  Month
+                </label>
+                <input
+                  type="month"
+                  value={filters.month}
+                  onChange={(e) => setFilters({ ...filters, month: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Filter size={16} className="inline mr-1" />
+                  Status
+                </label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={() => setFilters({ month: new Date().toISOString().slice(0, 7), status: 'all' })}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Total Sessions</p>
+                  <p className="text-2xl font-bold text-indigo-600">{statistics.totalSessions}</p>
+                </div>
+                <FileText size={32} className="text-indigo-200" />
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Total OT Hours</p>
+                  <p className="text-2xl font-bold text-orange-600">{statistics.totalHours.toFixed(1)}h</p>
+                </div>
+                <Clock size={32} className="text-orange-200" />
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Approved</p>
+                  <p className="text-2xl font-bold text-green-600">{statistics.approved}</p>
+                </div>
+                <CheckCircle size={32} className="text-green-200" />
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Pending</p>
+                  <p className="text-2xl font-bold text-yellow-600">{statistics.pending}</p>
+                </div>
+                <AlertCircle size={32} className="text-yellow-200" />
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -233,12 +395,15 @@ export default function OTRegistrationPage() {
                     required
                   >
                     <option value="">-- Select Reason --</option>
-                    <option value="Urgent Project">Urgent Project</option>
-                    <option value="Tight Deadline">Tight Deadline</option>
-                    <option value="Team Support">Team Support</option>
-                    <option value="Backlog Work">Backlog Work</option>
-                    <option value="Other">Other</option>
+                    {otReasons.map((reason) => (
+                      <option key={reason.id} value={reason.name}>
+                        {reason.name}
+                      </option>
+                    ))}
                   </select>
+                  {otReasons.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">Loading reasons...</p>
+                  )}
                 </div>
 
                 <div>
@@ -273,13 +438,13 @@ export default function OTRegistrationPage() {
               </h2>
 
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                {otRequests.length === 0 ? (
+                {filteredRequests.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <AlertCircle size={48} className="mx-auto mb-2 text-gray-300" />
-                    <p>No OT registrations yet</p>
+                    <p>No OT registrations found</p>
                   </div>
                 ) : (
-                  otRequests.map((request) => (
+                  filteredRequests.map((request) => (
                     <div key={request.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
