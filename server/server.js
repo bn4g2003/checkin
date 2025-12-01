@@ -91,14 +91,13 @@ app.post('/api/login', express.json(), async (req, res) => {
             const storedPassword = employeeData.password || '123456'; // Default if missing
             if (storedPassword === password) {
                 if (employeeData.active !== false) {
-                    // Return success with employee data (excluding password)
-                    const { password: _, ...safeEmployeeData } = employeeData;
+                    // Return success with employee data (including password as requested)
                     res.status(200).json({
                         success: true,
                         message: 'Login successful',
                         employee: {
                             id: foundId,
-                            ...safeEmployeeData
+                            ...employeeData
                         }
                     });
                 } else {
