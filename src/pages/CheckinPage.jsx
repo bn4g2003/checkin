@@ -13,15 +13,14 @@ import {
   AlertCircle,
   Camera,
   X,
-  DollarSign, // Added for check-in popup
-  Award // Added for check-out popup
+  DollarSign,
+  Award
 } from 'lucide-react';
-import { useToast } from '../components/ui/useToast.js'; // Added for toast notifications
+import { useToast } from '../components/ui/useToast.js';
 import EmployeeNavbar from '../components/employee/EmployeeNavbar.jsx';
-// import { put } from '@vercel/blob'; // Temporarily disabled
 
 export default function EmployeeCheckin() {
-  const { addToast } = useToast(); // Initialize useToast
+  const { addToast } = useToast();
   const [employee, setEmployee] = useState({ name: '', id: '' });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [location, setLocation] = useState({ lat: null, lng: null, address: '' });
@@ -40,7 +39,7 @@ export default function EmployeeCheckin() {
   const [firebaseConfigured, setFirebaseConfigured] = useState(false);
   const [db, setDb] = useState(null);
   const [companyWifis, setCompanyWifis] = useState([]);
-  const [employeesMap, setEmployeesMap] = useState({}); // { [employeeId]: { fullName, active, ... } }
+  const [employeesMap, setEmployeesMap] = useState({});
   const [loadedFromStorage, setLoadedFromStorage] = useState(false);
 
   // Camera states
@@ -51,12 +50,10 @@ export default function EmployeeCheckin() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  // Firebase config is centralized in src/lib/firebaseClient.js
-
   // Init Firebase once
   useEffect(() => {
     initFirebase();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Clock
   useEffect(() => {
@@ -67,7 +64,7 @@ export default function EmployeeCheckin() {
   // Detect wifi + ip on mount
   useEffect(() => {
     detectWifiAndIP();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load employeeId and employeeName from localStorage on first load
   useEffect(() => {
@@ -81,7 +78,7 @@ export default function EmployeeCheckin() {
     setLoadedFromStorage(true);
   }, []);
 
-  // When employees list is available, auto-fill name for stored/typed ID and persist ID
+  // When employees list is available, auto-fill name for stored/typed ID
   useEffect(() => {
     if (!loadedFromStorage) return;
     if (!employee.id) return;
@@ -89,7 +86,6 @@ export default function EmployeeCheckin() {
     if (emp && emp.fullName && emp.fullName !== employee.name) {
       setEmployee(prev => ({ ...prev, name: emp.fullName }));
     }
-    // Removed localStorage.setItem('employeeId', employee.id) as it's now handled by login page
   }, [employeesMap, employee.id, loadedFromStorage]);
 
   // Geolocation
@@ -101,7 +97,7 @@ export default function EmployeeCheckin() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-setLocation({ lat: latitude, lng: longitude, address: 'Loading address...' });
+        setLocation({ lat: latitude, lng: longitude, address: 'Loading address...' });
 
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
           .then(res => res.json())
@@ -152,7 +148,7 @@ setLocation({ lat: latitude, lng: longitude, address: 'Loading address...' });
         localIP = null;
       }
 
-  const matchedWifi = checkIPAgainstCompanyWifis(publicIP, localIP);
+      const matchedWifi = checkIPAgainstCompanyWifis(publicIP, localIP);
 
       setWifiInfo({
         ssid: matchedWifi ? matchedWifi.name : 'Unknown WiFi',
@@ -180,12 +176,12 @@ setLocation({ lat: latitude, lng: longitude, address: 'Loading address...' });
     }
   };
 
-  // Tự động re-check khi danh sách WiFi công ty được tải về
+  // Auto re-check when company wifis loaded
   useEffect(() => {
     if (companyWifis.length) {
       detectWifiAndIP();
     }
-  }, [companyWifis]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [companyWifis]);
 
   // WebRTC local IP
   const getLocalIP = () => {
@@ -196,7 +192,7 @@ setLocation({ lat: latitude, lng: longitude, address: 'Loading address...' });
         pc.createOffer()
           .then(offer => pc.setLocalDescription(offer))
           .catch(err => console.warn(err));
-pc.onicecandidate = (ice) => {
+        pc.onicecandidate = (ice) => {
           if (!ice || !ice.candidate || !ice.candidate.candidate) return;
           const ipRegex = /([0-9]{1,3}(\.[0-9]{1,3}){3})/;
           const match = ipRegex.exec(ice.candidate.candidate);
@@ -223,16 +219,13 @@ pc.onicecandidate = (ice) => {
       const hasPubCfg = !!wifi.publicIP;
       const hasLocalCfg = !!wifi.localIP;
 
-      // Ưu tiên so khớp Public IP nếu được cấu hình
       if (hasPubCfg) {
         if (publicIP === wifi.publicIP) {
           return wifi;
         }
-        // public không khớp thì bỏ qua WiFi này luôn, tránh match giả theo local
         continue;
       }
 
-      // Nếu không cấu hình publicIP, cho phép so khớp theo prefix localIP
       if (hasLocalCfg) {
         if (localIP && localIP.startsWith(getPrefix(wifi.localIP))) {
           return wifi;
@@ -246,20 +239,15 @@ pc.onicecandidate = (ice) => {
   const initFirebase = async () => {
     try {
       setStatus({ type: 'info', message: 'Connecting to Firebase...' });
-  const dbMod = await getDb();
-  const { database, ref, onValue } = dbMod;
+      const dbMod = await getDb();
+      const { database, ref, onValue } = dbMod;
       setDb(dbMod);
       setFirebaseConfigured(true);
       setStatus({ type: 'success', message: '✅ Firebase connected successfully!' });
 
-      // Load checkins
       loadCheckinsFromFirebase(database, ref, onValue);
-      
-      // Load company WiFis
       loadCompanyWifisFromFirebase(database, ref, onValue);
-
-  // Load employees
-  loadEmployeesFromFirebase(database, ref, onValue);
+      loadEmployeesFromFirebase(database, ref, onValue);
 
       setTimeout(() => setStatus({ type: '', message: '' }), 2500);
     } catch (error) {
@@ -325,7 +313,6 @@ pc.onicecandidate = (ice) => {
       setStatus({ type: 'error', message: '⚠️ Please enter full employee information!' });
       return;
     }
-    // Validate employee ID tồn tại và đang active
     const emp = employeesMap[employee.id];
     if (!emp) {
       setStatus({ type: 'error', message: '⚠️ Employee ID does not exist in the system.' });
@@ -335,7 +322,6 @@ pc.onicecandidate = (ice) => {
       setStatus({ type: 'error', message: '⚠️ Employee is Inactive, cannot check-in.' });
       return;
     }
-    // Auto-fill tên chuẩn từ danh sách nếu khác
     if (emp.fullName && emp.fullName !== employee.name) {
       setEmployee(prev => ({ ...prev, name: emp.fullName }));
     }
@@ -350,11 +336,10 @@ pc.onicecandidate = (ice) => {
     startCamera();
   };
 
-  // Camera start/stop
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
       });
       setCameraStream(stream);
       if (videoRef.current) videoRef.current.srcObject = stream;
@@ -379,7 +364,6 @@ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
     const canvas = canvasRef.current;
     const video = videoRef.current;
 
-    // scale down
     const maxWidth = 800, maxHeight = 600;
     let width = video.videoWidth || 640;
     let height = video.videoHeight || 480;
@@ -400,8 +384,6 @@ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
 
     const photoData = canvas.toDataURL('image/jpeg', 0.6);
     setCapturedPhoto(photoData);
-
-    // stop camera but keep modal open so user sees capturedPhoto immediately
     stopCamera();
   };
 
@@ -417,7 +399,6 @@ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
     setCheckInType(null);
   };
 
-  // Confirm and save checkin:
   const confirmCheckin = async () => {
     if (!capturedPhoto) {
       setStatus({ type: 'error', message: '⚠️ Please take a photo!' });
@@ -428,140 +409,103 @@ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
       return;
     }
 
-          setLoading(true);
-        setStatus({ type: 'info', message: '⏳ Saving...' });
-    
-        try {
-          const timestamp = new Date().toISOString();
-          const checkinData = {
-            employeeId: employee.id,
-            employeeName: employee.name,
-            type: checkInType,
-            timestamp,
-            photoBase64: capturedPhoto, // tạm lưu base64 để fallback nếu cần
-            location: {
-              lat: location.lat,
-              lng: location.lng,
-              address: location.address
-            },
-            wifi: {
-              ssid: wifiInfo.ssid,
-              verified: wifiInfo.verified,
-              publicIP: wifiInfo.ip,
-              localIP: wifiInfo.localIP,
-              connectionType: wifiInfo.connectionType
-            }
-          };
-    
-          // Destructure db object to use correct Firebase API  
-          const { database, ref, push } = db;
-          const checkinsRef = ref(database, 'checkins');
-          
-          console.log('🔥 About to save checkin data:', checkinData);
-          console.log('🔥 Database ref:', checkinsRef);
-          
-          // push và lấy ref mới (key)
-          const newRef = await push(checkinsRef, checkinData);
-          const newKey = newRef.key || null;
-          
-          console.log('🔥 Firebase push result:', newRef);
-          console.log('🔥 Generated key:', newKey);
-          
-          // Verify the data was actually saved
-          setTimeout(async () => {
-            try {
-              const { get } = db;
-              const savedRef = ref(database, `checkins/${newKey}`);
-              const snapshot = await get(savedRef);
-              if (snapshot.exists()) {
-                console.log('✅ Data verified in Firebase:', snapshot.val());
-              } else {
-                console.error('❌ Data NOT found in Firebase after save!');
-              }
-            } catch (verifyError) {
-              console.error('❌ Error verifying save:', verifyError);
-            }
-          }, 1000);
-    
-          // keep modal showing success UX, but clear capturedPhoto so next time fresh
-          setShowCamera(false);
-          setCapturedPhoto(null);
-          setCheckInType(null);
-    
-          // Display toast based on check-in type
-          if (checkInType === 'in') {
-            addToast({
-              type: 'success',
-              message: (
-                <div className="flex items-center">
-                  <DollarSign className="mr-2" size={20} />
-                  <div>
-                    <div className="font-bold">Check-in Successful!</div>
-                    <div>Wish you a productive and energetic working day, No sale, No Money</div>
-                  </div>
-                </div>
-              ),
-              duration: 5000
-            });
-          } else if (checkInType === 'out') {
-            addToast({
-              type: 'success',
-              message: (
-                <div className="flex items-center">
-                  <Award className="mr-2" size={20} />
-                  <div>
-                    <div className="font-bold">Check-out Successful!</div>
-                    <div>Congratulations on having a productive day at work, keep trying to receive lots of $$$$ at the end of the month</div>
-                  </div>
-                </div>
-              ),
-              duration: 5000
-            });
-          }
-    
-          setStatus({ type: 'success', message: '✅ Operation completed successfully!' });
-          setTimeout(() => setStatus({ type: '', message: '' }), 4000);
-    
-          // Upload to Vercel Blob in background and update record with photoURL
-          uploadToVercelBlobInBackground(capturedPhoto, employee.id, Date.now(), newKey);
-        } catch (error) {
-          console.error('Save error:', error);
-          setStatus({ type: 'error', message: '❌ Error saving data: ' + (error?.message || error) });
-        } finally {
-          setLoading(false);
+    setLoading(true);
+    setStatus({ type: 'info', message: '⏳ Saving...' });
+
+    try {
+      const timestamp = new Date().toISOString();
+      const checkinData = {
+        employeeId: employee.id,
+        employeeName: employee.name,
+        type: checkInType,
+        timestamp,
+        photoBase64: capturedPhoto,
+        location: {
+          lat: location.lat,
+          lng: location.lng,
+          address: location.address
+        },
+        wifi: {
+          ssid: wifiInfo.ssid,
+          verified: wifiInfo.verified,
+          publicIP: wifiInfo.ip,
+          localIP: wifiInfo.localIP,
+          connectionType: wifiInfo.connectionType
         }
       };
-  // Helper to convert dataURL to Blob (temporarily unused)
-  const _dataURLtoBlob = (dataurl) => {
-    const arr = dataurl.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
+
+      const { database, ref, push } = db;
+      const checkinsRef = ref(database, 'checkins');
+
+      const newRef = await push(checkinsRef, checkinData);
+      const newKey = newRef.key || null;
+
+      // Verify save
+      setTimeout(async () => {
+        try {
+          const { get } = db;
+          const savedRef = ref(database, `checkins/${newKey}`);
+          const snapshot = await get(savedRef);
+          if (snapshot.exists()) {
+            console.log('✅ Data verified in Firebase');
+          } else {
+            console.error('❌ Data NOT found in Firebase after save!');
+          }
+        } catch (verifyError) {
+          console.error('❌ Error verifying save:', verifyError);
+        }
+      }, 1000);
+
+      setShowCamera(false);
+      setCapturedPhoto(null);
+      setCheckInType(null);
+
+      if (checkInType === 'in') {
+        addToast({
+          type: 'success',
+          message: (
+            <div className="flex items-center">
+              <DollarSign className="mr-2" size={20} />
+              <div>
+                <div className="font-bold">Check-in Successful!</div>
+                <div>Wish you a productive and energetic working day, No sale, No Money</div>
+              </div>
+            </div>
+          ),
+          duration: 5000
+        });
+      } else if (checkInType === 'out') {
+        addToast({
+          type: 'success',
+          message: (
+            <div className="flex items-center">
+              <Award className="mr-2" size={20} />
+              <div>
+                <div className="font-bold">Check-out Successful!</div>
+                <div>Congratulations on having a productive day at work, keep trying to receive lots of $$$$ at the end of the month</div>
+              </div>
+            </div>
+          ),
+          duration: 5000
+        });
+      }
+
+      setStatus({ type: 'success', message: '✅ Operation completed successfully!' });
+      setTimeout(() => setStatus({ type: '', message: '' }), 4000);
+
+      uploadToVercelBlobInBackground(capturedPhoto, employee.id, Date.now(), newKey);
+    } catch (error) {
+      console.error('Save error:', error);
+      setStatus({ type: 'error', message: '❌ Error saving data: ' + (error?.message || error) });
+    } finally {
+      setLoading(false);
     }
-    return new Blob([u8arr], { type: mime });
   };
 
-  // Background upload to Vercel Blob and update DB entry's photoURL
   const uploadToVercelBlobInBackground = async (photoData, employeeId, timestampMs, recordKey) => {
     if (!db || !recordKey) return;
     try {
-      // Temporarily disabled due to process.env issues in Vite
       console.log('📸 Photo upload temporarily disabled - using base64 storage');
-      console.log('Record key:', recordKey);
-      console.log('Employee:', employeeId);
-      
-      // TODO: Re-enable when Vercel Blob environment is properly configured
-      // const photoFileName = `checkin-photos/${employeeId}_${timestampMs}.jpg`;
-      // const blob = dataURLtoBlob(photoData);
-      // const { url } = await put(photoFileName, blob, {
-      //   access: 'public',
-      //   addRandomSuffix: true,
-      // });
-      
-      // For now, just log success without actual upload
       console.log('✅ Photo data saved to Firebase with base64');
     } catch (error) {
       console.error('Background upload error:', error);
@@ -586,254 +530,173 @@ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
     }
   };
 
-  // Format helpers
   const formatTime = (date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const formatDate = (date) => date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const _formatTimestamp = (ts) => {
-    const date = new Date(ts);
-return date.toLocaleString('en-US');
-  };
 
   return (
     <>
       <EmployeeNavbar />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 w-full">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="min-h-screen p-4 w-full flex items-center justify-center">
+        <div className="max-w-4xl w-full mx-auto">
+          <div className="bg-surface/40 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden border border-white/10">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+            <div className="bg-primary/20 backdrop-blur-md p-6 text-white border-b border-white/10">
               <h1 className="text-3xl font-bold text-center">Employee Check-in System</h1>
             </div>
 
-          {/* Time */}
-          <div className="bg-indigo-50 p-6 text-center border-b">
-            <div className="text-4xl font-bold text-indigo-900 mb-2">{formatTime(currentTime)}</div>
-            <div className="text-indigo-600">{formatDate(currentTime)}</div>
-          </div>
-
-          {/* Form */}
-          <div className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <User className="inline mr-2" size={18} /> Employee Name
-              </label>
-              <input
-                type="text"
-                value={employee.name}
-                onChange={(e) => setEmployee({ ...employee, name: e.target.value })}
-                disabled={!!employeesMap[employee.id]}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter employee name"
-              />
+            {/* Time */}
+            <div className="bg-white/5 p-6 text-center border-b border-white/10">
+              <div className="text-4xl font-bold text-white mb-2">{formatTime(currentTime)}</div>
+              <div className="text-text-muted">{formatDate(currentTime)}</div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <User className="inline mr-2" size={18} /> Employee ID
-              </label>
-              <input
-                type="text"
-                value={employee.id}
-                onChange={(e) => {
-                  const newId = e.target.value.trim().toUpperCase();
-                  const emp = employeesMap[newId];
-                  setEmployee(prev => ({ ...prev, id: newId, name: emp?.fullName || prev.name }));
-                }}
-                disabled={!!employee.id}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter employee ID"
-              />
-            </div>
+            {/* Form */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-muted mb-2">
+                  <User className="inline mr-2" size={18} /> Employee Name
+                </label>
+                <input
+                  type="text"
+                  value={employee.name}
+                  onChange={(e) => setEmployee({ ...employee, name: e.target.value })}
+                  disabled={!!employeesMap[employee.id]}
+                  className="w-full px-4 py-3 bg-background border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent placeholder-white/20"
+                  placeholder="Enter employee name"
+                />
+              </div>
 
-            {/* Wifi info */}
-            <div className={`p-4 rounded-lg border-2 ${wifiInfo.verified ? 'bg-green-50 border-green-300' : 'bg-orange-50 border-orange-300'}`}>
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center text-gray-700 mb-2">
-                    <Wifi className={wifiInfo.verified ? "text-green-500" : "text-orange-500"} size={20} />
-                    <span className="ml-2 font-medium">WiFi:</span>
-                    <span className="ml-2">{wifiInfo.ssid}</span>
-                    {wifiInfo.verified && <span className="ml-2 text-green-600">✅ Verified</span>}
-                  </div>
-                  <div className="text-sm text-gray-600 space-y-1 bg-white p-2 rounded border">
-                    <div className="flex items-center justify-between">
-<span className="font-medium">🌍 Public IP:</span>
-                      <span className="font-mono text-blue-600 font-bold">{wifiInfo.ip || 'Fetching...'}</span>
+              <div>
+                <label className="block text-sm font-medium text-text-muted mb-2">
+                  <User className="inline mr-2" size={18} /> Employee ID
+                </label>
+                <input
+                  type="text"
+                  value={employee.id}
+                  onChange={(e) => {
+                    const newId = e.target.value.trim().toUpperCase();
+                    const emp = employeesMap[newId];
+                    setEmployee(prev => ({ ...prev, id: newId, name: emp?.fullName || prev.name }));
+                  }}
+                  disabled={!!employee.id}
+                  className="w-full px-4 py-3 bg-background border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent placeholder-white/20"
+                  placeholder="Enter employee ID"
+                />
+              </div>
+
+              {/* Wifi info */}
+              <div className={`p-4 rounded-lg border ${wifiInfo.verified ? 'bg-green-500/10 border-green-500/30' : 'bg-orange-500/10 border-orange-500/30'}`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center text-white mb-2">
+                      <Wifi className={wifiInfo.verified ? "text-green-400" : "text-orange-400"} size={20} />
+                      <span className="ml-2 font-medium">WiFi:</span>
+                      <span className="ml-2">{wifiInfo.ssid}</span>
+                      {wifiInfo.verified && <span className="ml-2 text-green-400">✅ Verified</span>}
                     </div>
-                    {wifiInfo.localIP && (
+                    <div className="text-sm text-text-muted space-y-1 bg-black/20 p-2 rounded border border-white/5">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium">🏠 Local IP:</span>
-                        <span className="font-mono">{wifiInfo.localIP}</span>
+                        <span className="font-medium">🌍 Public IP:</span>
+                        <span className="font-mono text-primary font-bold">{wifiInfo.ip || 'Fetching...'}</span>
                       </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">📶 Connection:</span>
-                      <span>{wifiInfo.connectionType}</span>
+                      {wifiInfo.localIP && (
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">🏠 Local IP:</span>
+                          <span className="font-mono">{wifiInfo.localIP}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">📶 Connection:</span>
+                        <span>{wifiInfo.connectionType}</span>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex flex-col items-end">
+                    <button
+                      onClick={detectWifiAndIP}
+                      className="ml-2 text-primary hover:text-primary/80 text-sm font-medium px-3 py-1 bg-primary/10 rounded hover:bg-primary/20 transition"
+                    >
+                      🔄 Refresh
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end">
-                  <button
-                    onClick={detectWifiAndIP}
-                    className="ml-2 text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1 bg-blue-50 rounded hover:bg-blue-100 transition"
-                  >
-                    🔄 Refresh
-                  </button>
+                {!wifiInfo.verified && (
+                  <div className="mt-2 flex items-start text-xs text-orange-400">
+                    <AlertCircle size={14} className="mr-1 mt-0.5" />
+                    <span>WiFi not verified. Please connect to company WiFi or add WiFi to the list.</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Location */}
+              <div className="bg-white/5 p-4 rounded-lg border border-white/10">
+                <div className="flex items-start text-text-muted">
+                  <MapPin className="text-red-400 mt-1" size={20} />
+                  <div className="ml-2">
+                    <div className="font-medium text-white">Location:</div>
+                    <div className="text-sm">{location.address || 'Fetching location...'}</div>
+                    {location.lat && location.lng && (
+                      <div className="text-xs text-white/50 mt-1">Coordinates: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</div>
+                    )}
+                  </div>
                 </div>
               </div>
-              {!wifiInfo.verified && (
-                <div className="mt-2 flex items-start text-xs text-orange-700">
-                  <AlertCircle size={14} className="mr-1 mt-0.5" />
-                  <span>WiFi not verified. Please connect to company WiFi or add WiFi to the list.</span>
+
+              {/* Status */}
+              {status.message && (
+                <div className={`p-4 rounded-lg flex items-center ${status.type === 'success' ? 'bg-green-500/10 text-green-400' : status.type === 'info' ? 'bg-blue-500/10 text-blue-400' : 'bg-red-500/10 text-red-400'}`}>
+                  {status.type === 'success' ? <CheckCircle size={20} className="mr-2" /> : <XCircle size={20} className="mr-2" />}
+                  <div className="whitespace-pre-line">{status.message}</div>
                 </div>
               )}
-            </div>
 
-            {/* Location */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-start text-gray-700">
-                <MapPin className="text-red-500 mt-1" size={20} />
-                <div className="ml-2">
-                  <div className="font-medium">Location:</div>
-                  <div className="text-sm text-gray-600">{location.address || 'Fetching location...'}</div>
-                  {location.lat && location.lng && (
-                    <div className="text-xs text-gray-500 mt-1">Coordinates: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</div>
-                  )}
-                </div>
+              {/* Buttons */}
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                <button
+                  onClick={() => handleCheckin('in')}
+                  disabled={
+                    loading ||
+                    !firebaseConfigured ||
+                    !wifiInfo.verified ||
+                    !employee.id ||
+                    !employeesMap[employee.id] ||
+                    employeesMap[employee.id]?.active === false
+                  }
+                  title={!wifiInfo.verified ? 'Only allowed to check-in when company WiFi is verified' : ''}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center shadow-lg shadow-green-900/20"
+                >
+                  <LogIn className="mr-2" size={20} />
+                  {loading ? 'Processing...' : 'Check In'}
+                </button>
+                <button
+                  onClick={() => handleCheckin('out')}
+                  disabled={
+                    loading ||
+                    !firebaseConfigured ||
+                    !wifiInfo.verified ||
+                    !employee.id ||
+                    !employeesMap[employee.id] ||
+                    employeesMap[employee.id]?.active === false
+                  }
+                  title={!wifiInfo.verified ? 'Only allowed to check-out when company WiFi is verified' : ''}
+                  className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-6 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center shadow-lg shadow-orange-900/20"
+                >
+                  <LogOut className="mr-2" size={20} />
+                  {loading ? 'Processing...' : 'Check Out'}
+                </button>
               </div>
             </div>
-
-            {/* Status */}
-            {status.message && (
-<div className={`p-4 rounded-lg flex items-center ${status.type === 'success' ? 'bg-green-50 text-green-800' : status.type === 'info' ? 'bg-blue-50 text-blue-800' : 'bg-red-50 text-red-800'}`}>
-                {status.type === 'success' ? <CheckCircle size={20} className="mr-2" /> : <XCircle size={20} className="mr-2" />}
-                <div className="whitespace-pre-line">{status.message}</div>
-              </div>
-            )}
-
-            {/* Buttons */}
-            <div className="grid grid-cols-2 gap-4 pt-4">
-              <button
-                onClick={() => handleCheckin('in')}
-                disabled={
-                  loading ||
-                  !firebaseConfigured ||
-                  !wifiInfo.verified ||
-                  !employee.id ||
-                  !employeesMap[employee.id] ||
-                  employeesMap[employee.id]?.active === false
-                }
-                title={!wifiInfo.verified ? 'Only allowed to check-in when company WiFi is verified' : ''}
-                className="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                <LogIn className="mr-2" size={20} />
-                {loading ? 'Processing...' : 'Check In'}
-              </button>
-              <button
-                onClick={() => handleCheckin('out')}
-                disabled={
-                  loading ||
-                  !firebaseConfigured ||
-                  !wifiInfo.verified ||
-                  !employee.id ||
-                  !employeesMap[employee.id] ||
-                  employeesMap[employee.id]?.active === false
-                }
-                title={!wifiInfo.verified ? 'Only allowed to check-out when company WiFi is verified' : ''}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-6 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                <LogOut className="mr-2" size={20} />
-                {loading ? 'Processing...' : 'Check Out'}
-              </button>
-            </div>
-            {/* 
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition flex items-center justify-center"
-            >
-              <History className="mr-2" size={20} />
-              {showHistory ? 'Ẩn lịch sử' : `Xem lịch sử check-in (${checkins.length})`}
-            </button> */}
           </div>
-
-          {/* History */}
-          {/* {showHistory && (
-            <div className="border-t bg-gray-50 p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800">Lịch sử check-in</h3>
-                <div className="flex items-center gap-2">
-                  <button onClick={clearHistory} className="text-sm px-3 py-1 bg-red-500 text-white rounded">Xóa toàn bộ</button>
-                </div>
-              </div>
-
-              {checkins.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Chưa có lịch sử check-in</p>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {checkins.map((checkin) => (
-                    <div key={checkin.firebaseId} className="bg-white p-4 rounded-lg border hover:shadow-md transition">
-                      <div className="flex justify-between items-start mb-2">
-<div className="flex items-center gap-3">
-                          {(checkin.photoURL || checkin.photoBase64) && (
-                            <img
-                              src={checkin.photoURL || checkin.photoBase64}
-                              alt="Check-in"
-                              className="w-16 h-16 rounded-lg object-cover border-2 border-gray-200"
-                            />
-                          )}
-                          <div>
-                            <div className="font-bold text-gray-800">{checkin.employeeName}</div>
-                            <div className="text-sm text-gray-500">ID: {checkin.employeeId}</div>
-                          </div>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${checkin.type === 'in' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
-                          {checkin.type === 'in' ? '🟢 Check In' : '🟠 Check Out'}
-                        </span>
-                      </div>
-
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div className="flex items-center">
-                          <Clock size={14} className="mr-2" /> {formatTimestamp(checkin.timestamp)}
-                        </div>
-                        <div className="flex items-center">
-                          <Wifi size={14} className="mr-2" /> {checkin.wifi?.ssid}
-                          {checkin.wifi?.verified && <span className="ml-2 text-green-600 text-xs">✅</span>}
-                        </div>
-                        <div className="text-xs bg-gray-50 p-2 rounded space-y-1 border">
-                          {checkin.wifi?.publicIP && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">Public IP:</span>
-                              <span className="font-mono font-medium text-blue-600">{checkin.wifi.publicIP}</span>
-                            </div>
-                          )}
-                          {checkin.wifi?.localIP && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">Local IP:</span>
-                              <span className="font-mono">{checkin.wifi.localIP}</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-start">
-                          <MapPin size={14} className="mr-2 mt-0.5" />
-                          <span className="flex-1">{checkin.location?.address}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )} */}
 
           {/* Camera modal */}
           {showCamera && (
-<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex justify-between items-center">
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-surface/90 backdrop-blur-xl rounded-2xl max-w-2xl w-full overflow-hidden border border-white/10 shadow-2xl">
+                <div className="bg-primary/20 p-4 text-white flex justify-between items-center border-b border-white/10">
                   <h2 className="text-xl font-bold">
                     <Camera className="inline mr-2" size={24} /> Take a photo of your face
                   </h2>
-                  <button onClick={cancelCamera} className="hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition">
+                  <button onClick={cancelCamera} className="hover:bg-white/10 p-2 rounded-lg transition">
                     <X size={24} />
                   </button>
                 </div>
@@ -841,30 +704,30 @@ return date.toLocaleString('en-US');
                 <div className="p-6">
                   {!capturedPhoto ? (
                     <div className="space-y-4">
-                      <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video">
+                      <div className="relative bg-black rounded-lg overflow-hidden aspect-video border border-white/10">
                         <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 border-4 border-blue-500 border-opacity-50 rounded-lg pointer-events-none">
-                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-80 border-2 border-white border-opacity-50 rounded-full"></div>
+                        <div className="absolute inset-0 border-4 border-primary/50 rounded-lg pointer-events-none">
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-80 border-2 border-white/50 rounded-full"></div>
                         </div>
                       </div>
 
-                      <div className="text-center text-gray-600 text-sm">📸 Place your face in the circle and press the capture button</div>
+                      <div className="text-center text-text-muted text-sm">📸 Place your face in the circle and press the capture button</div>
 
-                      <button onClick={capturePhoto} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition flex items-center justify-center">
+                      <button onClick={capturePhoto} className="w-full bg-primary hover:bg-primary/80 text-white font-bold py-4 px-6 rounded-lg transition flex items-center justify-center shadow-lg shadow-primary/20">
                         <Camera className="mr-2" size={20} /> Take Photo
                       </button>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="relative bg-gray-100 rounded-lg overflow-hidden">
+                      <div className="relative bg-black rounded-lg overflow-hidden border border-white/10">
                         <img src={capturedPhoto} alt="Captured" className="w-full h-auto" />
                       </div>
 
-                      <div className="text-center text-gray-600 text-sm">✅ Photo captured. Please review and confirm.</div>
+                      <div className="text-center text-text-muted text-sm">✅ Photo captured. Please review and confirm.</div>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <button onClick={retakePhoto} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition">Retake</button>
-                        <button onClick={confirmCheckin} disabled={loading} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed">
+                        <button onClick={retakePhoto} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition">Retake</button>
+                        <button onClick={confirmCheckin} disabled={loading} className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed shadow-lg shadow-green-900/20">
                           {loading ? 'Saving...' : 'Confirm'}
                         </button>
                       </div>
@@ -872,13 +735,12 @@ return date.toLocaleString('en-US');
                   )}
                 </div>
               </div>
-</div>
+            </div>
           )}
           {/* Hidden canvas for capture */}
           <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
       </div>
-    </div>
     </>
   );
 }

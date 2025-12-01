@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getDb } from '../../lib/firebaseClient';
-import { 
-  Clock, 
-  Calendar, 
-  FileText, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Clock,
+  Calendar,
+  FileText,
+  CheckCircle,
+  XCircle,
   AlertCircle,
   User,
   Filter,
@@ -108,7 +108,7 @@ export default function OTApprovalPage() {
     const now = new Date();
     let from, to;
 
-    switch(type) {
+    switch (type) {
       case 'today':
         from = to = now.toISOString().split('T')[0];
         break;
@@ -150,7 +150,7 @@ export default function OTApprovalPage() {
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(req => 
+      filtered = filtered.filter(req =>
         req.employeeName?.toLowerCase().includes(term) ||
         req.employeeId?.toLowerCase().includes(term) ||
         req.reason?.toLowerCase().includes(term)
@@ -242,7 +242,7 @@ export default function OTApprovalPage() {
     try {
       const { database, ref, push } = await getDb();
       const reasonsRef = ref(database, 'otReasons');
-      
+
       await push(reasonsRef, {
         name: newReason.trim(),
         order: otReasons.length,
@@ -303,27 +303,27 @@ export default function OTApprovalPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-text-muted">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-['Poppins']">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-600">
+      <div className="bg-surface/40 backdrop-blur-md rounded-xl shadow-lg p-6 border-l-4 border-primary border-y border-r border-white/10">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-red-800 mb-2">OT Management</h1>
-            <p className="text-gray-600">Approve and manage overtime requests</p>
+            <h1 className="text-3xl font-bold text-white mb-2">OT Management</h1>
+            <p className="text-text-muted">Approve and manage overtime requests</p>
           </div>
           <button
             onClick={() => setShowReasonManager(!showReasonManager)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition shadow-lg"
           >
             <Settings size={18} />
             Manage Reasons
@@ -333,34 +333,34 @@ export default function OTApprovalPage() {
 
       {/* OT Reason Manager Modal */}
       {showReasonManager && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-surface border border-white/10 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Manage OT Reasons</h2>
+                <h2 className="text-2xl font-bold text-white">Manage OT Reasons</h2>
                 <button
                   onClick={() => setShowReasonManager(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-text-muted hover:text-white transition-colors"
                 >
                   <X size={24} />
                 </button>
               </div>
 
               {/* Add New Reason */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Add New Reason</h3>
+              <div className="mb-6 p-4 bg-surface-bright rounded-lg border border-border-highlight">
+                <h3 className="text-sm font-semibold text-white mb-3">Add New Reason</h3>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={newReason}
                     onChange={(e) => setNewReason(e.target.value)}
                     placeholder="Enter new OT reason..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 px-3 py-2 bg-background border border-border-highlight rounded-md text-white focus:ring-2 focus:ring-primary/50 outline-none"
                     onKeyPress={(e) => e.key === 'Enter' && handleAddReason()}
                   />
                   <button
                     onClick={handleAddReason}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/80 transition-colors"
                   >
                     <Plus size={18} />
                     Add
@@ -370,18 +370,18 @@ export default function OTApprovalPage() {
 
               {/* Reasons List */}
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                <h3 className="text-sm font-semibold text-text-muted mb-3">
                   Current Reasons ({otReasons.length})
                 </h3>
                 {otReasons.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No reasons configured yet</p>
+                  <p className="text-text-muted text-center py-8">No reasons configured yet</p>
                 ) : (
                   otReasons.map((reason, index) => (
-                    <div key={reason.id} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-                      <span className="w-8 h-8 flex items-center justify-center bg-indigo-100 text-indigo-800 rounded-full text-sm font-bold">
+                    <div key={reason.id} className="flex items-center gap-2 p-3 bg-white/5 rounded-lg hover:bg-white/10 border border-white/5 transition-colors">
+                      <span className="w-8 h-8 flex items-center justify-center bg-primary/20 text-primary rounded-full text-sm font-bold">
                         {index + 1}
                       </span>
-                      
+
                       {editingReason === reason.id ? (
                         <>
                           <input
@@ -399,29 +399,29 @@ export default function OTApprovalPage() {
                                 e.target.blur();
                               }
                             }}
-                            className="flex-1 px-3 py-1 border border-indigo-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            className="flex-1 px-3 py-1 bg-background border border-primary rounded-md text-white focus:ring-2 focus:ring-primary/50 outline-none"
                             autoFocus
                           />
                           <button
                             onClick={() => setEditingReason(null)}
-                            className="p-2 text-gray-600 hover:text-gray-800"
+                            className="p-2 text-text-muted hover:text-white"
                           >
                             <X size={16} />
                           </button>
                         </>
                       ) : (
                         <>
-                          <span className="flex-1 font-medium text-gray-800">{reason.name}</span>
+                          <span className="flex-1 font-medium text-white">{reason.name}</span>
                           <button
                             onClick={() => setEditingReason(reason.id)}
-                            className="p-2 text-indigo-600 hover:text-indigo-800"
+                            className="p-2 text-primary hover:text-primary/80"
                             title="Edit"
                           >
                             <Edit size={16} />
                           </button>
                           <button
                             onClick={() => handleDeleteReason(reason.id)}
-                            className="p-2 text-red-600 hover:text-red-800"
+                            className="p-2 text-red-400 hover:text-red-300"
                             title="Delete"
                           >
                             <Trash2 size={16} />
@@ -436,7 +436,7 @@ export default function OTApprovalPage() {
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => setShowReasonManager(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                  className="px-4 py-2 bg-white/10 text-white rounded-md hover:bg-white/20 transition-colors"
                 >
                   Close
                 </button>
@@ -448,60 +448,60 @@ export default function OTApprovalPage() {
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className="bg-surface-bright rounded-xl shadow-lg p-4 border border-border-highlight">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Requests</p>
-              <p className="text-2xl font-bold text-gray-800">{statistics.total}</p>
+              <p className="text-sm text-text-muted">Total Requests</p>
+              <p className="text-2xl font-bold text-white">{statistics.total}</p>
             </div>
-            <FileText size={32} className="text-gray-300" />
+            <FileText size={32} className="text-white/20" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className="bg-surface-bright rounded-xl shadow-lg p-4 border border-border-highlight">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-yellow-600">{statistics.pending}</p>
+              <p className="text-sm text-text-muted">Pending</p>
+              <p className="text-2xl font-bold text-yellow-400">{statistics.pending}</p>
             </div>
-            <AlertCircle size={32} className="text-yellow-300" />
+            <AlertCircle size={32} className="text-yellow-400/30" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className="bg-surface-bright rounded-xl shadow-lg p-4 border border-border-highlight">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Approved</p>
-              <p className="text-2xl font-bold text-green-600">{statistics.approved}</p>
+              <p className="text-sm text-text-muted">Approved</p>
+              <p className="text-2xl font-bold text-green-400">{statistics.approved}</p>
             </div>
-            <CheckCircle size={32} className="text-green-300" />
+            <CheckCircle size={32} className="text-green-400/30" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className="bg-surface-bright rounded-xl shadow-lg p-4 border border-border-highlight">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Rejected</p>
-              <p className="text-2xl font-bold text-red-600">{statistics.rejected}</p>
+              <p className="text-sm text-text-muted">Rejected</p>
+              <p className="text-2xl font-bold text-red-400">{statistics.rejected}</p>
             </div>
-            <XCircle size={32} className="text-red-300" />
+            <XCircle size={32} className="text-red-400/30" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className="bg-surface-bright rounded-xl shadow-lg p-4 border border-border-highlight">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total OT Hours</p>
-              <p className="text-2xl font-bold text-indigo-600">{statistics.totalHours.toFixed(1)}h</p>
+              <p className="text-sm text-text-muted">Total OT Hours</p>
+              <p className="text-2xl font-bold text-primary">{statistics.totalHours.toFixed(1)}h</p>
             </div>
-            <Clock size={32} className="text-indigo-300" />
+            <Clock size={32} className="text-primary/30" />
           </div>
         </div>
       </div>
 
       {/* Quick Filters */}
-      <div className="bg-white rounded-lg shadow-md p-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Filters</h3>
+      <div className="bg-surface/40 backdrop-blur-md rounded-xl shadow-lg p-4 border border-white/10">
+        <h3 className="text-sm font-semibold text-white mb-3">Quick Filters</h3>
         <div className="flex flex-wrap gap-2">
           {[
             { value: 'today', label: 'Today' },
@@ -513,11 +513,10 @@ export default function OTApprovalPage() {
             <button
               key={filter.value}
               onClick={() => handleQuickFilter(filter.value)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                quickFilter === filter.value
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${quickFilter === filter.value
+                ? 'bg-primary text-white shadow-lg'
+                : 'bg-white/5 text-text-muted hover:bg-white/10 hover:text-white'
+                }`}
             >
               {filter.label}
             </button>
@@ -528,7 +527,7 @@ export default function OTApprovalPage() {
               setDateTo('');
               setQuickFilter('');
             }}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-white/5 text-text-muted hover:bg-white/10 hover:text-white transition-colors"
           >
             Clear Date
           </button>
@@ -536,11 +535,11 @@ export default function OTApprovalPage() {
       </div>
 
       {/* Advanced Filters */}
-      <div className="bg-white rounded-lg shadow-md p-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Advanced Filters</h3>
+      <div className="bg-surface/40 backdrop-blur-md rounded-xl shadow-lg p-4 border border-white/10">
+        <h3 className="text-sm font-semibold text-white mb-3">Advanced Filters</h3>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-text-muted mb-2">
               <Calendar size={16} className="inline mr-1" />
               From Date
             </label>
@@ -551,12 +550,12 @@ export default function OTApprovalPage() {
                 setDateFrom(e.target.value);
                 setQuickFilter('');
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 bg-background border border-white/10 rounded-md text-white focus:ring-2 focus:ring-primary/50 outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-text-muted mb-2">
               <Calendar size={16} className="inline mr-1" />
               To Date
             </label>
@@ -567,19 +566,19 @@ export default function OTApprovalPage() {
                 setDateTo(e.target.value);
                 setQuickFilter('');
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 bg-background border border-white/10 rounded-md text-white focus:ring-2 focus:ring-primary/50 outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-text-muted mb-2">
               <User size={16} className="inline mr-1" />
               Employee ({uniqueEmployees.length})
             </label>
             <select
               value={filterEmployee}
               onChange={(e) => setFilterEmployee(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 bg-background border border-white/10 rounded-md text-white focus:ring-2 focus:ring-primary/50 outline-none"
             >
               <option value="">All Employees</option>
               {uniqueEmployees.map(emp => (
@@ -591,14 +590,14 @@ export default function OTApprovalPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-text-muted mb-2">
               <Filter size={16} className="inline mr-1" />
               Status
             </label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 bg-background border border-white/10 rounded-md text-white focus:ring-2 focus:ring-primary/50 outline-none"
             >
               <option value="all">All</option>
               <option value="pending">Pending</option>
@@ -608,7 +607,7 @@ export default function OTApprovalPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-text-muted mb-2">
               <Search size={16} className="inline mr-1" />
               Search
             </label>
@@ -617,7 +616,7 @@ export default function OTApprovalPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Name, ID, reason..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 bg-background border border-white/10 rounded-md text-white focus:ring-2 focus:ring-primary/50 outline-none"
             />
           </div>
         </div>
@@ -632,7 +631,7 @@ export default function OTApprovalPage() {
               setDateTo('');
               setQuickFilter('');
             }}
-            className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+            className="px-4 py-2 text-sm bg-white/10 text-white rounded-md hover:bg-white/20 transition-colors"
           >
             Clear All Filters
           </button>
@@ -640,69 +639,69 @@ export default function OTApprovalPage() {
       </div>
 
       {/* OT Requests Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-surface/40 backdrop-blur-md rounded-xl shadow-lg overflow-hidden border border-white/10">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-white/10">
+            <thead className="bg-surface-bright">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Employee
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   OT Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Time
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Hours
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Reason
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-white/5 bg-transparent">
               {filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="7" className="px-6 py-8 text-center text-text-muted">
                     No OT requests found
                   </td>
                 </tr>
               ) : (
                 filteredRequests.map((request) => (
-                  <tr key={request.id} className="hover:bg-gray-50">
+                  <tr key={request.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <User size={16} className="text-gray-400 mr-2" />
+                        <User size={16} className="text-text-muted mr-2" />
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{request.employeeName}</div>
-                          <div className="text-sm text-gray-500">{request.employeeId}</div>
+                          <div className="text-sm font-medium text-white">{request.employeeName}</div>
+                          <div className="text-sm text-text-muted">{request.employeeId}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-900">
-                        <Calendar size={14} className="mr-1" />
+                      <div className="flex items-center text-sm text-white">
+                        <Calendar size={14} className="mr-1 text-text-muted" />
                         {new Date(request.date).toLocaleDateString('vi-VN')}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                       {request.startTime} - {request.endTime}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-bold text-indigo-600">{request.hours}h</span>
+                      <span className="text-sm font-bold text-primary">{request.hours}h</span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{request.reason}</div>
+                      <div className="text-sm text-white">{request.reason}</div>
                       {request.description && (
-                        <div className="text-xs text-gray-500 mt-1">{request.description}</div>
+                        <div className="text-xs text-text-muted mt-1">{request.description}</div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -715,12 +714,12 @@ export default function OTApprovalPage() {
                             setSelectedRequest(request);
                             setApproverNote('');
                           }}
-                          className="text-indigo-600 hover:text-indigo-900 font-medium"
+                          className="text-primary hover:text-primary/80 font-medium transition-colors"
                         >
                           Process
                         </button>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-text-muted">-</span>
                       )}
                     </td>
                   </tr>
@@ -733,55 +732,55 @@ export default function OTApprovalPage() {
 
       {/* Approval Modal */}
       {selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-surface border border-white/10 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Process OT Request</h2>
+              <h2 className="text-2xl font-bold text-white mb-4">Process OT Request</h2>
 
-              <div className="space-y-4 mb-6">
+              <div className="space-y-4 mb-6 text-white">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Employee</p>
+                    <p className="text-sm text-text-muted">Employee</p>
                     <p className="font-medium">{selectedRequest.employeeName}</p>
-                    <p className="text-sm text-gray-500">{selectedRequest.employeeId}</p>
+                    <p className="text-sm text-text-muted">{selectedRequest.employeeId}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">OT Date</p>
+                    <p className="text-sm text-text-muted">OT Date</p>
                     <p className="font-medium">{new Date(selectedRequest.date).toLocaleDateString('vi-VN')}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Time</p>
+                    <p className="text-sm text-text-muted">Time</p>
                     <p className="font-medium">{selectedRequest.startTime} - {selectedRequest.endTime}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">OT Hours</p>
-                    <p className="font-medium text-indigo-600 text-lg">{selectedRequest.hours}h</p>
+                    <p className="text-sm text-text-muted">OT Hours</p>
+                    <p className="font-medium text-primary text-lg">{selectedRequest.hours}h</p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600">Reason</p>
+                  <p className="text-sm text-text-muted">Reason</p>
                   <p className="font-medium">{selectedRequest.reason}</p>
                 </div>
 
                 {selectedRequest.description && (
                   <div>
-                    <p className="text-sm text-gray-600">Detailed Description</p>
-                    <p className="text-gray-700">{selectedRequest.description}</p>
+                    <p className="text-sm text-text-muted">Detailed Description</p>
+                    <p className="text-white/80">{selectedRequest.description}</p>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-text-muted mb-2">
                     Manager's Note
                   </label>
                   <textarea
                     value={approverNote}
                     onChange={(e) => setApproverNote(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    className="w-full px-3 py-2 bg-background border border-white/10 rounded-lg focus:ring-2 focus:ring-primary/50 outline-none text-white"
                     rows="3"
                     placeholder="Enter note (required if rejecting)..."
                   />
@@ -791,26 +790,23 @@ export default function OTApprovalPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => handleApprove(selectedRequest.id)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-lg"
                 >
                   <CheckCircle size={18} />
                   Approve
                 </button>
                 <button
                   onClick={() => handleReject(selectedRequest.id)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow-lg"
                 >
                   <XCircle size={18} />
                   Reject
                 </button>
                 <button
-                  onClick={() => {
-                    setSelectedRequest(null);
-                    setApproverNote('');
-                  }}
-                  className="px-4 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
+                  onClick={() => setSelectedRequest(null)}
+                  className="px-4 py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition"
                 >
-                  Close
+                  Cancel
                 </button>
               </div>
             </div>

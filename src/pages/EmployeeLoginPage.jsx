@@ -15,18 +15,42 @@ export default function EmployeeLoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { database, ref, get } = await getDb();
-      const employeesRef = ref(database, `employees/${employeeId.toUpperCase()}`);
-      const snapshot = await get(employeesRef);
+      const { database, ref, get, query, orderByChild, equalTo } = await getDb();
 
-      if (snapshot.exists()) {
-        const employeeData = snapshot.val();
-        
+      let employeeData = null;
+      let foundId = null;
+
+      // Check if input is email
+      const isEmail = employeeId.includes('@');
+
+      if (isEmail) {
+        const employeesRef = ref(database, 'employees');
+        const emailQuery = query(employeesRef, orderByChild('email'), equalTo(employeeId));
+        const snapshot = await get(emailQuery);
+
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          foundId = Object.keys(data)[0]; // Get the first match
+          employeeData = data[foundId];
+        }
+      } else {
+        // Assume it's Employee ID
+        const targetId = employeeId.toUpperCase();
+        const employeesRef = ref(database, `employees/${targetId}`);
+        const snapshot = await get(employeesRef);
+
+        if (snapshot.exists()) {
+          employeeData = snapshot.val();
+          foundId = targetId;
+        }
+      }
+
+      if (employeeData) {
         // Kiểm tra password
         const storedPassword = employeeData.password || '123456'; // Mặc định là 123456 nếu chưa có
         if (storedPassword === password) {
           if (employeeData.active !== false) {
-            localStorage.setItem('employeeSessionId', employeeId.toUpperCase());
+            localStorage.setItem('employeeSessionId', foundId);
             localStorage.setItem('employeeSessionName', employeeData.fullName);
             addToast({ type: 'success', message: `Welcome, ${employeeData.fullName}!` });
             navigate('/'); // Redirect to CheckinPage
@@ -37,7 +61,7 @@ export default function EmployeeLoginPage() {
           addToast({ type: 'error', message: 'Invalid password.' });
         }
       } else {
-        addToast({ type: 'error', message: 'Employee ID not found.' });
+        addToast({ type: 'error', message: isEmail ? 'Email not found.' : 'Employee ID not found.' });
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -55,7 +79,7 @@ export default function EmployeeLoginPage() {
           <div className="flex justify-center mb-4">
             <img src="/logo-kama.png" alt="Logo" className="h-32 w-auto" />
           </div>
-          
+
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Employee Portal</h1>
             <p className="text-gray-500 text-sm">Sign in to access your account</p>
@@ -63,22 +87,22 @@ export default function EmployeeLoginPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-gray-700 flex items-center mb-2">
-                <User size={18} className="mr-2 text-indigo-600"/>
-                Employee ID
+                <User size={18} className="mr-2 text-indigo-600" />
+                Employee ID or Email
               </label>
               <input
                 type="text"
                 value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                placeholder="e.g., NV001"
+                placeholder="Enter ID (e.g. NV001) or Email"
                 required
               />
             </div>
-            
+
             <div>
               <label className="text-sm font-medium text-gray-700 flex items-center mb-2">
-                <Lock size={18} className="mr-2 text-indigo-600"/>
+                <Lock size={18} className="mr-2 text-indigo-600" />
                 Password
               </label>
               <input
@@ -100,7 +124,7 @@ export default function EmployeeLoginPage() {
             {loading ? 'Logging in...' : 'Sign In'}
           </button>
         </form>
-        
+
         <p className="text-center text-sm text-gray-500 mt-6">
           Need help? Contact your HR department
         </p>

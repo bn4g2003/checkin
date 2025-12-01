@@ -2,11 +2,14 @@
   "rules": {
     ".read": false,
     ".write": false,
-    
     "checkins": {
       ".read": true,
       ".write": true,
-      ".indexOn": ["timestamp", "employeeId", "type"],
+      ".indexOn": [
+        "timestamp",
+        "employeeId",
+        "type"
+      ],
       "$checkinId": {
         "employeeId": {
           ".validate": "newData.isString() && newData.val().length > 0"
@@ -56,11 +59,16 @@
         }
       }
     },
-
     "employees": {
       ".read": true,
       ".write": true,
-      ".indexOn": ["fullName", "department", "team", "active"],
+      ".indexOn": [
+        "fullName",
+        "department",
+        "team",
+        "active",
+        "email"
+      ],
       "$employeeId": {
         "fullName": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
@@ -85,11 +93,13 @@
         }
       }
     },
-
     "companyWifis": {
       ".read": true,
       ".write": true,
-      ".indexOn": ["name", "createdAt"],
+      ".indexOn": [
+        "name",
+        "createdAt"
+      ],
       "$wifiId": {
         "name": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
@@ -105,7 +115,6 @@
         }
       }
     },
-
     "workSettings": {
       ".read": true,
       ".write": true,
@@ -127,11 +136,12 @@
         }
       }
     },
-
     "workRecords": {
       ".read": true,
       ".write": true,
-      ".indexOn": [".key"],
+      ".indexOn": [
+        ".key"
+      ],
       "$date": {
         "$employeeId": {
           "employeeId": {

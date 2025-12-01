@@ -2,9 +2,9 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LogOut, LayoutDashboard, Wifi, Users, DollarSign, Clock } from 'lucide-react';
 
-const linkBase = 'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200';
-const linkActive = 'bg-red-100 text-red-700 shadow-inner';
-const linkInactive = 'text-gray-600 hover:bg-gray-100 hover:text-gray-900';
+const linkBase = 'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200';
+const linkActive = 'bg-primary/10 text-primary shadow-[0_0_15px_rgba(83,202,253,0.3)]';
+const linkInactive = 'text-text-muted hover:bg-white/5 hover:text-white';
 
 export default function AdminLayout({ children }) {
   const navigate = useNavigate();
@@ -19,15 +19,15 @@ export default function AdminLayout({ children }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-sans">
+    <div className="flex min-h-screen font-sans text-text-main">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200/80 flex flex-col fixed h-full left-0 top-0">
-        <div className="p-6 border-b border-gray-200/80 flex items-center gap-3">
-          <img src="/logo-kama.png" alt="Logo" className="h-16 w-auto" />
-          <h1 className="text-2xl font-bold text-red-600 tracking-tight">Admin</h1>
+      <aside className="w-72 bg-background/30 backdrop-blur-xl border-r border-white/10 flex flex-col fixed h-full left-0 top-0 z-50 shadow-2xl">
+        <div className="p-8 flex items-center gap-3">
+          <img src="/logo-kama.png" alt="Logo" className="h-12 w-auto" />
+          <h1 className="text-2xl font-bold text-white tracking-tight">Admin</h1>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 px-4 space-y-2">
           <NavLink
             to="/admin/dashboard"
             className={({ isActive }) => `${linkBase} ${isActive ? linkActive : linkInactive}`}
@@ -68,10 +68,10 @@ export default function AdminLayout({ children }) {
           </NavLink>
         </nav>
 
-        <div className="p-4 mt-auto border-t border-gray-200/80">
+        <div className="p-4 mt-auto">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 bg-gray-100 hover:bg-red-100 hover:text-red-700 transition-all duration-200"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium text-text-muted bg-white/5 hover:bg-danger/10 hover:text-danger transition-all duration-200"
           >
             <LogOut size={18} />
             <span>Logout</span>
@@ -80,7 +80,7 @@ export default function AdminLayout({ children }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 ml-64 p-6 lg:p-8 bg-gray-50">
+      <main className="flex-1 ml-72 p-6 lg:p-8 min-h-screen">
         <div className="max-w-7xl mx-auto">
           {children}
         </div>
