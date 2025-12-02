@@ -2,6 +2,7 @@ import { initSSOListener } from "./ssoListener";
 import { getDb } from "./firebaseClient";
 
 async function handleLogin(email, password) {
+  console.log("🔄 SSO handleLogin called with:", email);
   const { database, ref, get } = await getDb();
 
   let employeeData = null;
