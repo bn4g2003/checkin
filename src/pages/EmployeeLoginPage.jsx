@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDb } from '../lib/firebaseClient';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -11,6 +11,20 @@ export default function EmployeeLoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Kiểm tra nếu đã đăng nhập thì redirect
+  useEffect(() => {
+    const employeeId = localStorage.getItem('employeeSessionId');
+    const isAdmin = localStorage.getItem('adminSession') === 'true';
+    
+    if (employeeId) {
+      if (isAdmin) {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
