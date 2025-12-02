@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDb } from '../lib/firebaseClient';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../components/ui/useToast';
 
 export default function EmployeeLoginPage() {
@@ -10,25 +10,32 @@ export default function EmployeeLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { database, ref, get, query, orderByChild, equalTo } = await getDb();
+      const { database, ref, get } = await getDb();
 
       let employeeData = null;
       let foundId = null;
 
-      // Tìm nhân viên theo email
+      // Tìm nhân viên theo email (tìm thủ công để tránh lỗi index)
       const employeesRef = ref(database, 'employees');
-      const emailQuery = query(employeesRef, orderByChild('email'), equalTo(email.toLowerCase().trim()));
-      const snapshot = await get(emailQuery);
+      const snapshot = await get(employeesRef);
 
       if (snapshot.exists()) {
-        const data = snapshot.val();
-        foundId = Object.keys(data)[0];
-        employeeData = data[foundId];
+        const allEmployees = snapshot.val();
+        const searchEmail = email.toLowerCase().trim();
+        
+        for (const [id, emp] of Object.entries(allEmployees)) {
+          if (emp.email && emp.email.toLowerCase() === searchEmail) {
+            foundId = id;
+            employeeData = emp;
+            break;
+          }
+        }
       }
 
       if (employeeData) {
@@ -91,14 +98,23 @@ export default function EmployeeLoginPage() {
                 <Lock size={18} className="mr-2 text-primary" />
                 Mật khẩu
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-background/50 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-primary/50 focus:border-transparent transition outline-none placeholder-white/20"
-                placeholder="Nhập mật khẩu"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-12 bg-background/50 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-primary/50 focus:border-transparent transition outline-none placeholder-white/20"
+                  placeholder="Nhập mật khẩu"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-white transition"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
           </div>
 
