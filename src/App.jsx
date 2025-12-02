@@ -8,7 +8,7 @@ import { ToastProvider } from './components/ui/ToastProvider.jsx';
 const CheckinPage = lazy(() => import('./pages/CheckinPage.jsx'));
 const EmployeeLoginPage = lazy(() => import('./pages/EmployeeLoginPage.jsx')); // New
 const EmployeeProfilePage = lazy(() => import('./pages/EmployeeProfilePage.jsx')); // New
-const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage.jsx'));
+
 const DashboardPage = lazy(() => import('./pages/admin/DashboardPage.jsx'));
 const EmployeesPage = lazy(() => import('./pages/admin/EmployeesPage.jsx'));
 const WifiCheckinsPage = lazy(() => import('./pages/admin/WifiCheckinsPage.jsx'));
@@ -18,7 +18,7 @@ const SalaryPage = lazy(() => import('./pages/admin/SalaryPage.jsx'));
 
 function ProtectedRoute({ children }) {
   const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('adminSession') === 'true';
-  return isLoggedIn ? children : <Navigate to="/admin" replace />;
+  return isLoggedIn ? children : <Navigate to="/employee-login" replace />;
 }
 
 // New Employee Protected Route
@@ -67,7 +67,7 @@ export default function AppRouter() {
                 </EmployeeProtectedRoute>
               }
             />
-            <Route path="/admin" element={<AdminLoginPage />} />
+            <Route path="/admin" element={<Navigate to="/employee-login" replace />} />
             <Route
               path="/admin/dashboard"
               element={

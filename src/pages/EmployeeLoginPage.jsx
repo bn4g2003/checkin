@@ -45,8 +45,17 @@ export default function EmployeeLoginPage() {
           if (employeeData.active !== false) {
             localStorage.setItem('employeeSessionId', foundId);
             localStorage.setItem('employeeSessionName', employeeData.fullName);
-            addToast({ type: 'success', message: `Xin chào, ${employeeData.fullName}!` });
-            navigate('/');
+            
+            // Kiểm tra Position - nếu là CEO&FOUNDER thì chuyển đến admin dashboard
+            const position = employeeData.position || '';
+            if (position.toUpperCase() === 'CEO&FOUNDER') {
+              localStorage.setItem('adminSession', 'true');
+              addToast({ type: 'success', message: `Xin chào Admin, ${employeeData.fullName}!` });
+              navigate('/admin/dashboard');
+            } else {
+              addToast({ type: 'success', message: `Xin chào, ${employeeData.fullName}!` });
+              navigate('/');
+            }
           } else {
             addToast({ type: 'error', message: 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ HR.' });
           }
