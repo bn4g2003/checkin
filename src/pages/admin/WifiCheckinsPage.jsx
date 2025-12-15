@@ -62,6 +62,8 @@ export default function WifiCheckinsPage() {
   const [dailyRecords, setDailyRecords] = useState([]); // array for today
   const [monthlySummary, setMonthlySummary] = useState([]);
   const [monthlyCache, setMonthlyCache] = useState({}); // { 'YYYY-MM': summaryArray }
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
+  const [employeeDetailModal, setEmployeeDetailModal] = useState(null); // { employee, dailyDetails }
   const historyPageSize = 10; // Dedicated page size for history to avoid conflicts
   const [modalPhoto, setModalPhoto] = useState(null); // modal photo state
   const [workHoursFilters, setWorkHoursFilters] = useState({ team: '', employee: '' });
@@ -157,42 +159,76 @@ export default function WifiCheckinsPage() {
     try {
       const ExcelJS = (await import('exceljs')).default;
       const workbook = new ExcelJS.Workbook();
-      const sheet = workbook.addWorksheet('MonthlySummary');
+      
+      // Sheet 1: Summary
+      const summarySheet = workbook.addWorksheet('Summary');
+      const summaryHeaders = ['Employee ID', 'Full Name', 'Work Days', 'Absent Days', 'Total Hours', 'Late Count', 'Early Departure Count'];
+      summarySheet.addRow(summaryHeaders);
+      const summaryHeaderRow = summarySheet.getRow(1);
+      summaryHeaderRow.font = { bold: true };
+      summaryHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      summaryHeaderRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF1F5' } }; });
 
-      const headers = ['Employee ID', 'Full Name', 'Days', 'Total Hours', 'Late Count', 'Early Departure Count'];
-      sheet.addRow(headers);
-      const headerRow = sheet.getRow(1);
-      headerRow.font = { bold: true };
-      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-      headerRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF1F5' } }; });
-
-      monthlySummary.forEach(m => {
-        sheet.addRow([
+      filteredMonthlySummary.forEach(m => {
+        summarySheet.addRow([
           (m.employeeId || '').toUpperCase(),
           m.employeeName || '',
-          m.days || 0,
+          m.workDays || m.days || 0,
+          m.absentDays || 0,
           m.totalHours || 0,
           m.lateCount || 0,
           m.earlyDepartureCount || 0
         ]);
       });
 
-      const widths = [12, 24, 10, 10, 12, 16];
-      widths.forEach((w, i) => sheet.getColumn(i + 1).width = w);
-      sheet.views = [{ state: 'frozen', ySplit: 1 }];
+      const summaryWidths = [12, 24, 12, 12, 12, 12, 18];
+      summaryWidths.forEach((w, i) => summarySheet.getColumn(i + 1).width = w);
+      summarySheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+      // Sheet 2: Daily Details
+      const detailSheet = workbook.addWorksheet('Daily Details');
+      const detailHeaders = ['Employee ID', 'Full Name', 'Date', 'Check-in', 'Check-out', 'Status', 'Hours', 'Late', 'Early Departure'];
+      detailSheet.addRow(detailHeaders);
+      const detailHeaderRow = detailSheet.getRow(1);
+      detailHeaderRow.font = { bold: true };
+      detailHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      detailHeaderRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF1F5' } }; });
+
+      filteredMonthlySummary.forEach(m => {
+        if (m.dailyDetails) {
+          const sortedDays = Object.keys(m.dailyDetails).sort();
+          sortedDays.forEach(day => {
+            const d = m.dailyDetails[day];
+            detailSheet.addRow([
+              (m.employeeId || '').toUpperCase(),
+              m.employeeName || '',
+              day,
+              d.checkin || '—',
+              d.checkout || '—',
+              d.status || '',
+              d.hours || 0,
+              d.late ? 'Yes' : 'No',
+              d.earlyDeparture ? 'Yes' : 'No'
+            ]);
+          });
+        }
+      });
+
+      const detailWidths = [12, 24, 12, 10, 10, 14, 10, 8, 14];
+      detailWidths.forEach((w, i) => detailSheet.getColumn(i + 1).width = w);
+      detailSheet.views = [{ state: 'frozen', ySplit: 1 }];
 
       const buf = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const monthKey = new Date().toISOString().slice(0, 7);
-      a.download = `monthly_summary_${monthKey}.xlsx`;
+      a.download = `monthly_summary_${selectedMonth}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      addToast({ type: 'success', message: 'Excel (XLSX) exported' });
+      addToast({ type: 'success', message: 'Excel (XLSX) exported with daily details' });
     } catch (e) {
       console.error(e);
       addToast({ type: 'error', message: 'Error exporting XLSX' });
@@ -471,15 +507,14 @@ export default function WifiCheckinsPage() {
     })();
   }, [checkins, workSettings, selectedDate]);
 
-  // Compute monthly summary with cache
+  // Compute monthly summary with cache - based on selectedMonth
   useEffect(() => {
     if (!checkins.length) { setMonthlySummary([]); return; }
-    const monthKey = new Date().toISOString().slice(0, 7);
-    if (monthlyCache[monthKey]) { setMonthlySummary(monthlyCache[monthKey]); return; }
-    const summary = computeMonthlySummary(checkins, workSettings, monthKey);
-    setMonthlyCache(cache => ({ ...cache, [monthKey]: summary }));
+    if (monthlyCache[selectedMonth]) { setMonthlySummary(monthlyCache[selectedMonth]); return; }
+    const summary = computeMonthlySummary(checkins, workSettings, selectedMonth);
+    setMonthlyCache(cache => ({ ...cache, [selectedMonth]: summary }));
     setMonthlySummary(summary);
-  }, [checkins, workSettings, monthlyCache]);
+  }, [checkins, workSettings, selectedMonth, monthlyCache]);
 
   // Filter daily records
   const filteredDailyRecords = useMemo(() => {
@@ -1002,7 +1037,27 @@ export default function WifiCheckinsPage() {
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-sm text-white">Monthly Summary (Current Month)</h3>
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold text-sm text-white">Monthly Summary</h3>
+                        <input
+                          type="month"
+                          value={selectedMonth}
+                          onChange={e => {
+                            setSelectedMonth(e.target.value);
+                            setMonthlyPage(1);
+                          }}
+                          className="px-2 py-1 bg-background/50 border border-white/10 rounded-lg text-white text-xs focus:ring-2 focus:ring-primary/50 outline-none"
+                        />
+                        <button
+                          onClick={() => {
+                            setSelectedMonth(new Date().toISOString().slice(0, 7));
+                            setMonthlyPage(1);
+                          }}
+                          className="px-2 py-1 bg-primary/20 text-primary rounded-lg text-xs hover:bg-primary/30 transition-colors"
+                        >
+                          This Month
+                        </button>
+                      </div>
                       <div className="flex items-center gap-4">
                         {filteredMonthlySummary.length > 0 && (
                           <div className="flex gap-4 text-xs">
@@ -1016,26 +1071,62 @@ export default function WifiCheckinsPage() {
                         <button onClick={exportMonthlyXLSX} className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700 transition-colors">Export XLSX</button>
                       </div>
                     </div>
-                    {filteredMonthlySummary.length === 0 ? <div className="text-xs text-text-muted">No data available.</div> : (
+                    {filteredMonthlySummary.length === 0 ? <div className="text-xs text-text-muted">No data available for {selectedMonth}.</div> : (
                       <div className="overflow-x-auto rounded-xl border border-white/10">
                         <table className="min-w-full text-xs">
                           <thead>
                             <tr className="bg-white/5 text-text-muted">
                               <th className="p-3 text-left">Employee</th>
                               <th className="p-3 text-left">Work Days</th>
+                              <th className="p-3 text-left">Absent Days</th>
                               <th className="p-3 text-left">Total Hours</th>
                               <th className="p-3 text-left">Late</th>
                               <th className="p-3 text-left">Early</th>
+                              <th className="p-3 text-left">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-white/5">
                             {monthlyPageList.map(m => (
-                              <tr key={m.employeeId} className="hover:bg-white/5 transition-colors">
+                              <tr 
+                                key={m.employeeId} 
+                                className="hover:bg-white/5 transition-colors cursor-pointer"
+                                onClick={() => setEmployeeDetailModal({ employee: m, dailyDetails: m.dailyDetails })}
+                              >
                                 <td className="p-3 text-white">{m.employeeName} <span className="text-white/50">({m.employeeId})</span></td>
-                                <td className="p-3 text-white">{m.days}</td>
-                                <td className="p-3 text-white">{m.totalHours}</td>
-                                <td className="p-3 text-white">{m.lateCount}</td>
-                                <td className="p-3 text-white">{m.earlyDepartureCount}</td>
+                                <td className="p-3 text-white">{m.workDays || m.days}</td>
+                                <td className="p-3">
+                                  {m.absentDays > 0 ? (
+                                    <span className="text-red-400 font-medium">{m.absentDays}</span>
+                                  ) : (
+                                    <span className="text-green-400">0</span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-white">{m.totalHours}h</td>
+                                <td className="p-3">
+                                  {m.lateCount > 0 ? (
+                                    <span className="text-orange-400 font-medium">{m.lateCount}</span>
+                                  ) : (
+                                    <span className="text-white">0</span>
+                                  )}
+                                </td>
+                                <td className="p-3">
+                                  {m.earlyDepartureCount > 0 ? (
+                                    <span className="text-yellow-400 font-medium">{m.earlyDepartureCount}</span>
+                                  ) : (
+                                    <span className="text-white">0</span>
+                                  )}
+                                </td>
+                                <td className="p-3">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEmployeeDetailModal({ employee: m, dailyDetails: m.dailyDetails });
+                                    }}
+                                    className="px-2 py-1 bg-primary/20 text-primary rounded text-xs hover:bg-primary/30 transition-colors"
+                                  >
+                                    View Details
+                                  </button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -1066,6 +1157,122 @@ export default function WifiCheckinsPage() {
               </div>
               <div className="text-xs text-text-muted mb-2">{modalPhoto.timestamp ? new Date(modalPhoto.timestamp).toLocaleString('en-US') : ''}</div>
               <img src={modalPhoto.src} alt="Check-in Photo" className="max-w-full max-h-[70vh] object-contain rounded-lg border border-white/10" />
+            </div>
+          </div>
+        )}
+
+        {/* Employee Detail Modal */}
+        {employeeDetailModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setEmployeeDetailModal(null)}>
+            <div className="bg-surface/90 backdrop-blur-xl p-6 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-auto border border-white/10" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="font-semibold text-white text-lg">{employeeDetailModal.employee.employeeName}</h3>
+                  <p className="text-xs text-text-muted">ID: {employeeDetailModal.employee.employeeId} | Month: {selectedMonth}</p>
+                </div>
+                <button onClick={() => setEmployeeDetailModal(null)} className="text-white/50 hover:text-white transition-colors text-xl">✕</button>
+              </div>
+              
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                <div className="bg-white/5 rounded-lg p-3 text-center">
+                  <div className="text-xs text-text-muted">Work Days</div>
+                  <div className="text-lg font-bold text-green-400">{employeeDetailModal.employee.workDays || employeeDetailModal.employee.days}</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-3 text-center">
+                  <div className="text-xs text-text-muted">Absent Days</div>
+                  <div className="text-lg font-bold text-red-400">{employeeDetailModal.employee.absentDays || 0}</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-3 text-center">
+                  <div className="text-xs text-text-muted">Total Hours</div>
+                  <div className="text-lg font-bold text-blue-400">{employeeDetailModal.employee.totalHours}h</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-3 text-center">
+                  <div className="text-xs text-text-muted">Late Count</div>
+                  <div className="text-lg font-bold text-orange-400">{employeeDetailModal.employee.lateCount}</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-3 text-center">
+                  <div className="text-xs text-text-muted">Early Departure</div>
+                  <div className="text-lg font-bold text-yellow-400">{employeeDetailModal.employee.earlyDepartureCount}</div>
+                </div>
+              </div>
+
+              {/* Daily Details Table */}
+              <div className="overflow-x-auto rounded-xl border border-white/10">
+                <table className="min-w-full text-xs">
+                  <thead>
+                    <tr className="bg-white/5 text-text-muted">
+                      <th className="p-3 text-left">Date</th>
+                      <th className="p-3 text-left">Day</th>
+                      <th className="p-3 text-left">Check-in</th>
+                      <th className="p-3 text-left">Check-out</th>
+                      <th className="p-3 text-left">Status</th>
+                      <th className="p-3 text-left">Hours</th>
+                      <th className="p-3 text-left">Late</th>
+                      <th className="p-3 text-left">Early</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {employeeDetailModal.dailyDetails && Object.keys(employeeDetailModal.dailyDetails).sort().map(day => {
+                      const d = employeeDetailModal.dailyDetails[day];
+                      const dayOfWeek = new Date(day).toLocaleDateString('en-US', { weekday: 'short' });
+                      const isWeekend = ['Sat', 'Sun'].includes(dayOfWeek);
+                      const isAbsent = d.status === 'Vắng mặt';
+                      return (
+                        <tr 
+                          key={day} 
+                          className={`transition-colors ${isAbsent ? 'bg-red-500/10' : isWeekend ? 'bg-yellow-500/5' : 'hover:bg-white/5'}`}
+                        >
+                          <td className="p-3 text-white font-mono">{day}</td>
+                          <td className={`p-3 ${isWeekend ? 'text-yellow-400' : 'text-text-muted'}`}>{dayOfWeek}</td>
+                          <td className="p-3">
+                            {d.checkin ? (
+                              <span className="text-green-400 font-mono">{d.checkin}</span>
+                            ) : (
+                              <span className="text-white/30">—</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            {d.checkout ? (
+                              <span className="text-blue-400 font-mono">{d.checkout}</span>
+                            ) : (
+                              <span className="text-white/30">—</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded text-xs ${
+                              d.status === 'Bình thường' ? 'bg-green-500/20 text-green-400' :
+                              d.status === 'Vắng mặt' ? 'bg-red-500/20 text-red-400' :
+                              d.status === 'Trễ giờ' ? 'bg-orange-500/20 text-orange-400' :
+                              d.status === 'Về sớm' ? 'bg-yellow-500/20 text-yellow-400' :
+                              d.status === 'Trễ & Sớm' ? 'bg-red-500/20 text-red-400' :
+                              d.status === 'Đang làm việc' ? 'bg-blue-500/20 text-blue-400' :
+                              'bg-white/10 text-white/50'
+                            }`}>
+                              {d.status}
+                            </span>
+                          </td>
+                          <td className="p-3 text-white">{d.hours || 0}h</td>
+                          <td className="p-3">
+                            {d.late ? (
+                              <span className="text-orange-400">✔️ {d.lateMinutes ? `(${d.lateMinutes}m)` : ''}</span>
+                            ) : (
+                              <span className="text-white/30">—</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            {d.earlyDeparture ? (
+                              <span className="text-yellow-400">✔️</span>
+                            ) : (
+                              <span className="text-white/30">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

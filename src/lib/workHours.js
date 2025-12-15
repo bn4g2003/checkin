@@ -107,6 +107,25 @@ export function computeDailyRecords(checkins, workSettings) {
   return records;
 }
 
+// Helper: convert minutes to HH:MM string
+export function minutesToTimeStr(minutes) {
+  if (minutes == null) return null;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// Get all days in a month
+export function getDaysInMonth(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const days = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    days.push(`${monthKey}-${String(d).padStart(2, '0')}`);
+  }
+  return days;
+}
+
 export function computeMonthlySummary(checkins, workSettings, monthKey) {
   // monthKey: 'YYYY-MM'
   const monthCheckins = checkins.filter(c => c.timestamp && c.timestamp.startsWith(monthKey));
@@ -117,6 +136,10 @@ export function computeMonthlySummary(checkins, workSettings, monthKey) {
     if (!byDate[day]) byDate[day] = [];
     byDate[day].push(c);
   }
+  
+  // Get all days in the month
+  const allDays = getDaysInMonth(monthKey);
+  
   const summaryByEmployee = {};
   for (const day of Object.keys(byDate)) {
     const daily = computeDailyRecords(byDate[day], workSettings);
@@ -129,15 +152,55 @@ export function computeMonthlySummary(checkins, workSettings, monthKey) {
           totalHours: 0,
           days: 0,
           lateCount: 0,
-          earlyDepartureCount: 0
+          earlyDepartureCount: 0,
+          dailyDetails: {} // Store daily details: { 'YYYY-MM-DD': { checkin, checkout, status, hours, late, early } }
         };
       }
       summaryByEmployee[empId].totalHours += d.totalHours;
       summaryByEmployee[empId].days += 1;
       if (d.late) summaryByEmployee[empId].lateCount += 1;
       if (d.earlyDeparture) summaryByEmployee[empId].earlyDepartureCount += 1;
+      
+      // Store daily detail
+      summaryByEmployee[empId].dailyDetails[day] = {
+        checkin: minutesToTimeStr(d.firstIn),
+        checkout: minutesToTimeStr(d.lastOut),
+        status: d.status,
+        hours: d.totalHours,
+        late: d.late,
+        earlyDeparture: d.earlyDeparture,
+        lateMinutes: d.lateMinutes || 0,
+        shortageHours: d.shortageHours || 0
+      };
     }
   }
+  
+  // Mark absent days for each employee (days in month with no record)
+  for (const empId of Object.keys(summaryByEmployee)) {
+    const emp = summaryByEmployee[empId];
+    for (const day of allDays) {
+      // Only mark past days as absent (not future days)
+      const today = new Date().toISOString().slice(0, 10);
+      if (day <= today && !emp.dailyDetails[day]) {
+        emp.dailyDetails[day] = {
+          checkin: null,
+          checkout: null,
+          status: 'Vắng mặt',
+          hours: 0,
+          late: false,
+          earlyDeparture: false,
+          lateMinutes: 0,
+          shortageHours: workSettings.standardHours || 8
+        };
+      }
+    }
+    // Calculate work days and absent days
+    const workedDays = Object.values(emp.dailyDetails).filter(d => d.status !== 'Vắng mặt').length;
+    const absentDays = Object.values(emp.dailyDetails).filter(d => d.status === 'Vắng mặt').length;
+    emp.workDays = workedDays;
+    emp.absentDays = absentDays;
+  }
+  
   // round totalHours
   for (const empId of Object.keys(summaryByEmployee)) {
     summaryByEmployee[empId].totalHours = +summaryByEmployee[empId].totalHours.toFixed(2);
